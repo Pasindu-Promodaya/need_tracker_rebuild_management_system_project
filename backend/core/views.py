@@ -30,7 +30,7 @@ from .serializers import (
 class OrganizationViewSet(viewsets.ModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
-    permission_classes = [IsOrgAdminOrReadOnly]  # Changed to allow org admins to edit their own org
+    permission_classes = [IsAdminOrReadOnly]  # Only system admins can create/edit organizations
 User = get_user_model()
 
 
@@ -191,7 +191,7 @@ class NeedItemViewSet(viewsets.ModelViewSet):
 class DocumentUploadViewSet(viewsets.ModelViewSet):
     queryset = DocumentUpload.objects.all()
     serializer_class = DocumentUploadSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+    permission_classes = [IsAdminOrReadOnly]
     
     def create(self, request, *args, **kwargs):
         """

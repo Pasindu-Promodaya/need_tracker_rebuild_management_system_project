@@ -317,9 +317,11 @@ export default function OrganizationDetailPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No Sections Yet
               </h3>
-              <p className="text-gray-500 mb-4">
-                Add sections to organize your needs
-              </p>
+              {(user?.role === "ADMIN" || user?.role === "ORG_ADMIN") && (
+                <p className="text-gray-500 mb-4">
+                  Add sections to organize your needs
+                </p>
+              )}
               {isAdmin && (
                 <button
                   onClick={() => setShowAddSection(true)}
