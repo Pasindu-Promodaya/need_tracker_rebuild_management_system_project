@@ -1,13 +1,13 @@
+
 from django.shortcuts import render 
 from rest_framework import viewsets, status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated
-from .models import Organization, Section, NeedItem, DocumentUpload
+from .models import Organization, Section, NeedItem, DocumentUpload, Donation
 from .permissions import IsAdminOrReadOnly, IsOrgAdminOrReadOnly, IsOwnerOrAdmin, IsDonorOrReadOnly, IsAdminUser
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny, IsAuthenticated, BasePermission
-from .models import Organization, Section, NeedItem, DocumentUpload
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.tokens import default_token_generator
@@ -15,6 +15,30 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
+from .serializers import (
+    OrganizationSerializer, 
+    SectionSerializer, 
+    NeedItemSerializer, 
+    DocumentUploadSerializer,
+    RegisterSerializer,
+    UserSerializer,
+    UpdateProfileSerializer,
+    DonationSerializer
+)
+
+# 5. Donation ViewSet
+class DonationViewSet(viewsets.ModelViewSet):
+    queryset = Donation.objects.all()
+    serializer_class = DonationSerializer
+    permission_classes = [AllowAny]  # Anyone can donate or view donations
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        donation = serializer.save(donor=user)
+        # Increment the quantity_received of the related NeedItem
+        need_item = donation.need_item
+        need_item.quantity_received += donation.quantity
+        need_item.save()
 
 from .serializers import (
     OrganizationSerializer, 

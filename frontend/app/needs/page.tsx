@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { NeedItem, getNeeds, priorityLabels } from "@/lib/api";
+import { NeedItem, getNeeds, priorityLabels, createDonation } from "@/lib/api";
 import NeedCard from "@/components/NeedCard";
+import DonateModal from "@/components/DonateModal";
+import { useAuth } from "@/lib/AuthContext";
 import PriorityFilter from "@/components/PriorityFilter";
 import { PageLoading } from "@/components/LoadingSpinner";
+import "../donor-modal-custom.css";
 
 export default function NeedsPage() {
+  const { user } = useAuth();
+  const [donateNeed, setDonateNeed] = useState<NeedItem | null>(null);
+  const [donateLoading, setDonateLoading] = useState(false);
+  const [donateSuccess, setDonateSuccess] = useState(false);
+  const [donateError, setDonateError] = useState("");
   const searchParams = useSearchParams();
   const [needs, setNeeds] = useState<NeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +25,9 @@ export default function NeedsPage() {
   const [sortBy, setSortBy] = useState<"priority" | "date" | "progress">(
     "priority",
   );
+  // Add state for login prompt and only-donor message
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showOnlyDonorMsg, setShowOnlyDonorMsg] = useState(false);
 
   useEffect(() => {
     async function fetchNeeds() {
@@ -88,7 +99,6 @@ export default function NeedsPage() {
           View and manage all registered needs across organizations
         </p>
       </div>
-
       {/* Stats Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
         <div className="flex flex-wrap gap-6">
@@ -124,7 +134,6 @@ export default function NeedsPage() {
           </div>
         </div>
       </div>
-
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <PriorityFilter
@@ -150,7 +159,6 @@ export default function NeedsPage() {
           </select>
         </div>
       </div>
-
       {/* Results */}
       {priorityFilter && (
         <div className="mb-4 flex items-center gap-2">
@@ -167,12 +175,24 @@ export default function NeedsPage() {
           </button>
         </div>
       )}
-
       {/* Needs Grid */}
       {sortedNeeds.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-12">
           {sortedNeeds.map((need) => (
-            <NeedCard key={need.id} need={need} showSection />
+            <NeedCard
+              key={need.id}
+              need={need}
+              showDonateButton={!user || user.role === "DONOR"}
+              onDonate={() => {
+                if (!user) {
+                  setShowLoginPrompt(true);
+                } else if (user.role !== "DONOR") {
+                  setShowOnlyDonorMsg(true);
+                } else {
+                  setDonateNeed(need);
+                }
+              }}
+            />
           ))}
         </div>
       ) : (
@@ -198,6 +218,108 @@ export default function NeedsPage() {
               ? `No ${priorityLabels[priorityFilter as keyof typeof priorityLabels]} needs registered`
               : "No needs have been registered yet"}
           </p>
+        </div>
+      )}
+      {user?.role === "DONOR" && donateNeed && (
+        <DonateModal
+          need={donateNeed}
+          isOpen={!!donateNeed}
+          onClose={() => {
+            setDonateNeed(null);
+            setDonateError("");
+            setDonateSuccess(false);
+          }}
+          onSubmit={async (quantity: number, message?: string) => {
+            setDonateLoading(true);
+            setDonateError("");
+            setDonateSuccess(false);
+            try {
+              await createDonation({
+                need_item: donateNeed.id,
+                quantity,
+                message,
+                donor: user?.id || null,
+              });
+              setDonateSuccess(true);
+              // Refresh needs after donation and close modal only after update
+              const data = await getNeeds(priorityFilter || undefined);
+              setNeeds(data);
+              setDonateNeed(null);
+              setDonateSuccess(false);
+            } catch (err: any) {
+              setDonateError(err.message || "Failed to donate");
+            } finally {
+              setDonateLoading(false);
+            }
+          }}
+        />
+      )}
+      {/* Login prompt modal for unauthenticated users */}
+      {showLoginPrompt && (
+        <div className="modal-overlay donor-modal-overlay">
+          <div className="modal donor-modal-custom">
+            <svg
+              className="mx-auto mb-3"
+              width="40"
+              height="40"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="#fbbf24"
+              strokeWidth="2"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="#fbbf24"
+                strokeWidth="2"
+                fill="#fef3c7"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v2m0 4h.01"
+              />
+            </svg>
+            <h2 className="text-xl font-extrabold mb-1 text-yellow-700">
+              Only Donors Can Donate
+            </h2>
+            <p className="mb-5 text-gray-700 text-sm">
+              You must have a donor account to donate to a need.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <a href="/login?tab=register" className="donor-btn-primary">
+                Register as Donor
+              </a>
+              <button
+                className="donor-btn-cancel"
+                onClick={() => setShowLoginPrompt(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Only donors can donate modal */}
+      {showOnlyDonorMsg && (
+        <div className="modal-overlay donor-modal-overlay">
+          <div className="modal donor-modal-custom">
+            <h2 className="text-2xl font-bold mb-3 text-yellow-700">
+              Only Donors Can Donate
+            </h2>
+            <p className="mb-6 text-gray-700">
+              You must have a donor account to donate to a need.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                className="donor-btn-primary"
+                onClick={() => setShowOnlyDonorMsg(false)}
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

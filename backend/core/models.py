@@ -1,5 +1,25 @@
+# Move imports to the top
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+
+# 6. DONATIONS (Donors pledging or fulfilling needs)
+class Donation(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('CONFIRMED', 'Confirmed'),
+        ('FULFILLED', 'Fulfilled'),
+        ('CANCELLED', 'Cancelled'),
+    )
+
+    donor = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name="donations")
+    need_item = models.ForeignKey('NeedItem', on_delete=models.CASCADE, related_name="donations")
+    quantity = models.PositiveIntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Donation by {self.donor or 'Guest'} for {self.need_item.name} ({self.quantity})"
 
 # 1. USERS
 # Extending the default user to distinguish between Admin, Donors, and Gov Officials

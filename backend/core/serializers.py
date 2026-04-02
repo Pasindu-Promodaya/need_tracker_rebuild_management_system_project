@@ -1,7 +1,9 @@
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import Organization, Section, NeedItem, DocumentUpload
+from .models import Organization, Section, NeedItem, DocumentUpload, Donation
+
 
 User = get_user_model()
 
@@ -11,6 +13,14 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'role', 'phone_number', 'first_name', 'last_name']
         read_only_fields = ['role'] # Role is not editable by default
+
+# 6. Donation Serializer
+class DonationSerializer(serializers.ModelSerializer):
+    donor = UserSerializer(read_only=True)
+    class Meta:
+        model = Donation
+        fields = ['id', 'donor', 'need_item', 'quantity', 'status', 'message', 'created_at']
+        read_only_fields = ['id', 'donor', 'status', 'created_at']
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
     current_password = serializers.CharField(write_only=True, required=False, allow_blank=True)

@@ -1,5 +1,6 @@
 import { NeedItem, priorityLabels, unitLabels } from "@/lib/api";
 import "./NeedCard.css";
+import "../app/donor-modal-custom.css";
 
 interface NeedCardProps {
   need: NeedItem;
@@ -7,6 +8,8 @@ interface NeedCardProps {
   sectionName?: string;
   onEdit?: () => void;
   onDelete?: () => void;
+  onDonate?: (need: NeedItem) => void;
+  showDonateButton?: boolean;
 }
 
 export default function NeedCard({
@@ -15,6 +18,8 @@ export default function NeedCard({
   sectionName,
   onEdit,
   onDelete,
+  onDonate,
+  showDonateButton,
 }: NeedCardProps) {
   const progress =
     need.quantity_required > 0
@@ -90,7 +95,7 @@ export default function NeedCard({
       </div>
 
       {/* Actions */}
-      {(onEdit || onDelete) && (
+      {(onEdit || onDelete || (showDonateButton && onDonate)) && (
         <div className="need-card__actions">
           {onEdit && (
             <button
@@ -134,6 +139,28 @@ export default function NeedCard({
                 />
               </svg>
               Delete
+            </button>
+          )}
+          {showDonateButton && onDonate && (
+            <button
+              onClick={() => onDonate(need)}
+              title="Donate to this need"
+              className="donate-btn-custom"
+            >
+              <svg
+                className="w-4 h-4 mr-1 -mt-0.5"
+                fill="none"
+                stroke="#2563eb"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 13c-4.418 0-8-3.582-8-8 0-3.314 2.686-6 6-6 1.306 0 2.417.835 2.83 2H12c-2.21 0-4 1.79-4 4 0 2.21 1.79 4 4 4s4-1.79 4-4c0-.553-.112-1.078-.312-1.563C16.417 9.835 17.528 9 18.834 9c3.314 0 6 2.686 6 6 0 4.418-3.582 8-8 8z"
+                />
+              </svg>
+              <span style={{ color: "#2563eb", fontWeight: 600 }}>Donate</span>
             </button>
           )}
         </div>
