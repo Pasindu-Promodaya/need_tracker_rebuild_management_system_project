@@ -143,88 +143,141 @@ export default function OrganizationDetailPage() {
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg
-                  className="w-8 h-8 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {organization.name}
-                </h1>
-                <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    {organization.district}
+          {/* Organization Name and Type */}
+          <div className="flex items-start gap-4 mb-6">
+            <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-8 h-8 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900">
+                {organization.name}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {organization.org_type && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    {organization.org_type}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Reg: {organization.registration_number}
+                )}
+                {organization.established_year && (
+                  <span className="text-sm text-gray-600">
+                    Established: {organization.established_year}
                   </span>
-                </div>
+                )}
               </div>
             </div>
+          </div>
 
-            {/* Stats */}
-            <div className="flex gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">
-                  {organization.sections?.length || 0}
-                </p>
-                <p className="text-sm text-gray-500">Sections</p>
+          {/* Core Information Grid */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6 pb-6 border-b border-gray-200">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase">
+                Registration Number
+              </label>
+              <p className="text-gray-900 mt-1">
+                {organization.registration_number}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase">
+                District
+              </label>
+              <p className="text-gray-900 mt-1">{organization.district}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase">
+                Address
+              </label>
+              <p className="text-gray-900 mt-1">{organization.address}</p>
+            </div>
+          </div>
+
+          {/* Contact Information Grid */}
+          <div className="grid gap-4 sm:grid-cols-3 mb-6 pb-6 border-b border-gray-200">
+            {organization.phone && (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">
+                  Phone
+                </label>
+                <a
+                  href={`tel:${organization.phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-blue-600 hover:text-blue-700 mt-1 block"
+                >
+                  {organization.phone}
+                </a>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">{totalNeeds}</p>
-                <p className="text-sm text-gray-500">Total Needs</p>
+            )}
+            {organization.email_contact && (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">
+                  Email
+                </label>
+                <a
+                  href={`mailto:${organization.email_contact}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-blue-600 hover:text-blue-700 mt-1 block"
+                >
+                  {organization.email_contact}
+                </a>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-red-600">
-                  {criticalNeeds}
-                </p>
-                <p className="text-sm text-gray-500">Critical</p>
+            )}
+            {organization.website && (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">
+                  Website
+                </label>
+                <a
+                  href={organization.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-blue-600 hover:text-blue-700 mt-1 block truncate"
+                >
+                  {organization.website}
+                </a>
               </div>
+            )}
+          </div>
+
+          {/* About/Description */}
+          {organization.description && (
+            <div className="mb-6 pb-6 border-b border-gray-200">
+              <label className="text-xs font-semibold text-gray-500 uppercase">
+                About
+              </label>
+              <p className="text-gray-700 mt-2 leading-relaxed">
+                {organization.description}
+              </p>
+            </div>
+          )}
+
+          {/* Stats */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-gray-900">
+                {organization.sections?.length || 0}
+              </p>
+              <p className="text-sm text-gray-500">Sections</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-bold text-gray-900">{totalNeeds}</p>
+              <p className="text-sm text-gray-500">Total Needs</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-bold text-red-600">{criticalNeeds}</p>
+              <p className="text-sm text-gray-500">Critical</p>
             </div>
           </div>
         </div>
