@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { NeedItem, getNeeds, priorityLabels, createDonation } from "@/lib/api";
 import NeedCard from "@/components/NeedCard";
 import DonateModal from "@/components/DonateModal";
+import EditNeedModal from "@/components/EditNeedModal";
+import { deleteNeed } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import PriorityFilter from "@/components/PriorityFilter";
 import { PageLoading } from "@/components/LoadingSpinner";
@@ -28,6 +30,11 @@ export default function NeedsPage() {
   // Add state for login prompt and only-donor message
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showOnlyDonorMsg, setShowOnlyDonorMsg] = useState(false);
+  // Edit/Delete modal state
+  const [editNeed, setEditNeed] = useState<NeedItem | null>(null);
+  const [deleteNeedItem, setDeleteNeedItem] = useState<NeedItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     async function fetchNeeds() {
@@ -178,22 +185,92 @@ export default function NeedsPage() {
       {/* Needs Grid */}
       {sortedNeeds.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-12">
-          {sortedNeeds.map((need) => (
-            <NeedCard
-              key={need.id}
-              need={need}
-              showDonateButton={!user || user.role === "DONOR"}
-              onDonate={() => {
-                if (!user) {
-                  setShowLoginPrompt(true);
-                } else if (user.role !== "DONOR") {
-                  setShowOnlyDonorMsg(true);
-                } else {
-                  setDonateNeed(need);
+          {sortedNeeds.map((need) => {
+            // Only show Edit/Delete for ADMIN or ORG_ADMIN
+            const canEditDelete =
+              user && (user.role === "ADMIN" || user.role === "ORG_ADMIN");
+            return (
+              <NeedCard
+                key={need.id}
+                need={need}
+                showDonateButton={!user || user.role === "DONOR"}
+                onDonate={() => {
+                  if (!user) {
+                    setShowLoginPrompt(true);
+                  } else if (user.role !== "DONOR") {
+                    setShowOnlyDonorMsg(true);
+                  } else {
+                    setDonateNeed(need);
+                  }
+                }}
+                onEdit={canEditDelete ? () => setEditNeed(need) : undefined}
+                onDelete={
+                  canEditDelete ? () => setDeleteNeedItem(need) : undefined
                 }
+              />
+            );
+          })}
+          {/* Edit Need Modal */}
+          {editNeed && (
+            <EditNeedModal
+              need={editNeed}
+              onClose={() => setEditNeed(null)}
+              onSuccess={async () => {
+                // Refresh needs after edit
+                const data = await getNeeds(priorityFilter || undefined);
+                setNeeds(data);
               }}
             />
-          ))}
+          )}
+
+          {/* Delete Need Confirmation Modal */}
+          {deleteNeedItem && (
+            <div className="modal-overlay donor-modal-overlay">
+              <div className="modal donor-modal-custom">
+                <h2 className="text-xl font-bold mb-3 text-red-700">
+                  Confirm Delete
+                </h2>
+                <p className="mb-5 text-gray-700 text-sm">
+                  Are you sure you want to delete <b>{deleteNeedItem.name}</b>?
+                </p>
+                {deleteError && (
+                  <div className="text-red-600 mb-2">{deleteError}</div>
+                )}
+                <div className="flex gap-2 justify-center">
+                  <button
+                    className="donor-btn-primary bg-red-600 hover:bg-red-700"
+                    disabled={deleteLoading}
+                    onClick={async () => {
+                      setDeleteLoading(true);
+                      setDeleteError("");
+                      try {
+                        await deleteNeed(deleteNeedItem.id);
+                        // Refresh needs after delete
+                        const data = await getNeeds(
+                          priorityFilter || undefined,
+                        );
+                        setNeeds(data);
+                        setDeleteNeedItem(null);
+                      } catch (err: any) {
+                        setDeleteError(err.message || "Failed to delete");
+                      } finally {
+                        setDeleteLoading(false);
+                      }
+                    }}
+                  >
+                    {deleteLoading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    className="donor-btn-cancel"
+                    disabled={deleteLoading}
+                    onClick={() => setDeleteNeedItem(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">

@@ -144,8 +144,13 @@ export default function NeedCard({
           {showDonateButton && onDonate && (
             <button
               onClick={() => onDonate(need)}
-              title="Donate to this need"
-              className="donate-btn-custom"
+              disabled={need.quantity_received >= need.quantity_required}
+              title={
+                need.quantity_received >= need.quantity_required
+                  ? "Need fulfilled"
+                  : "Donate to this need"
+              }
+              className={`donate-btn-custom ${need.quantity_received >= need.quantity_required ? "donate-btn-disabled" : ""}`}
             >
               <svg
                 className="w-4 h-4 mr-1 -mt-0.5"
@@ -160,7 +165,7 @@ export default function NeedCard({
                   d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 13c-4.418 0-8-3.582-8-8 0-3.314 2.686-6 6-6 1.306 0 2.417.835 2.83 2H12c-2.21 0-4 1.79-4 4 0 2.21 1.79 4 4 4s4-1.79 4-4c0-.553-.112-1.078-.312-1.563C16.417 9.835 17.528 9 18.834 9c3.314 0 6 2.686 6 6 0 4.418-3.582 8-8 8z"
                 />
               </svg>
-              <span style={{ color: "#2563eb", fontWeight: 600 }}>Donate</span>
+              <span className="donate-btn-text">Donate</span>
             </button>
           )}
         </div>

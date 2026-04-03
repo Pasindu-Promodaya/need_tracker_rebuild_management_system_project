@@ -98,3 +98,20 @@
 .donate-btn-custom:hover span {
   color: #2563eb;
 }
+.donate-btn-text {
+  color: #2563eb;
+  font-weight: 600;
+}
+.donate-btn-disabled {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.donate-btn-disabled svg {
+  stroke: #9ca3af;
+}
+.donate-btn-disabled .donate-btn-text {
+  color: #9ca3af;
+}
