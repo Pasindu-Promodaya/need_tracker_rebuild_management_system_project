@@ -10,8 +10,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         # Read permissions are allowed for any request
         if request.method in permissions.SAFE_METHODS:
             return True
-        
-        # Write permissions only for authenticated admins
+        # Write permissions for authenticated system admins and org admins
         return request.user and request.user.is_authenticated and request.user.role in ['ADMIN', 'ORG_ADMIN']
 
 

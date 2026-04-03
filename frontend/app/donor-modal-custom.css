@@ -1,0 +1,117 @@
+/* Modal overlay for donor modal */
+.donor-modal-overlay {
+  z-index: 2000;
+  background: rgba(30, 41, 59, 0.45);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.donor-modal-custom {
+  max-width: 340px;
+  text-align: center;
+  background: white;
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(30, 41, 59, 0.18);
+  padding: 2rem 1.5rem;
+  border: 1.5px solid #fbbf24;
+  margin: 0 auto;
+  position: relative;
+}
+/* Custom styles for donor modal and buttons */
+.donor-modal-custom {
+  animation: fadeInScale 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 2.5rem;
+}
+.donor-btn-primary {
+  background: #2563eb;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  font-weight: 600;
+  border: none;
+  transition: background 0.18s;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
+}
+.donor-btn-primary:hover {
+  background: #1746a2;
+}
+.donor-btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  font-weight: 600;
+  border: 1px solid #e5e7eb;
+  transition: background 0.18s;
+}
+.donor-btn-cancel:hover {
+  background: #e5e7eb;
+}
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.donate-btn-custom {
+  background: #f1f5ff;
+  border: 1.5px solid #2563eb;
+  color: #2563eb;
+  border-radius: 6px;
+  padding: 0.35rem 1.1rem 0.35rem 0.9rem;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition:
+    background 0.18s,
+    border 0.18s,
+    color 0.18s;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.06);
+}
+.donate-btn-custom:hover {
+  background: #e0e7ff;
+  color: #2563eb;
+  border-color: #1746a2;
+}
+.donate-btn-custom svg {
+  stroke: #2563eb;
+  transition: stroke 0.18s;
+}
+.donate-btn-custom:hover svg {
+  stroke: #2563eb;
+}
+.donate-btn-custom span {
+  color: #2563eb;
+  transition: color 0.18s;
+}
+.donate-btn-custom:hover span {
+  color: #2563eb;
+}
+.donate-btn-text {
+  color: #2563eb;
+  font-weight: 600;
+}
+.donate-btn-disabled {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.donate-btn-disabled svg {
+  stroke: #9ca3af;
+}
+.donate-btn-disabled .donate-btn-text {
+  color: #9ca3af;
+}

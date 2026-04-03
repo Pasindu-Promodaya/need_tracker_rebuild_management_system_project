@@ -21,7 +21,10 @@ router = DefaultRouter()
 router.register(r'organizations', OrganizationViewSet)
 router.register(r'sections', SectionViewSet)
 router.register(r'needs', NeedItemViewSet)
+
+from .views import DonationViewSet
 router.register(r'documents', DocumentUploadViewSet)
+router.register(r'donations', DonationViewSet)
 
 # The API URLs are now determined automatically by the router.
 urlpatterns = [
