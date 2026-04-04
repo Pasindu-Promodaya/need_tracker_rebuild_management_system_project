@@ -19,7 +19,13 @@ class DonationSerializer(serializers.ModelSerializer):
     donor = UserSerializer(read_only=True)
     class Meta:
         model = Donation
-        fields = ['id', 'donor', 'need_item', 'quantity', 'status', 'message', 'created_at']
+        fields = [
+            'id', 'donor', 'need_item', 'quantity', 'status', 'message', 
+            'estimated_delivery_date', 'created_at', 'donor_type',
+            'donor_name', 'donor_contact', 'donor_organization', 'donor_address',
+            'donor_email', 'donor_phone', 'government_department', 'government_program',
+            'government_officer_name', 'government_officer_designation', 'government_officer_contact'
+        ]
         read_only_fields = ['id', 'donor', 'status', 'created_at']
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
