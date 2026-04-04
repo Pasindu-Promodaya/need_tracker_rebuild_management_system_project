@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { NeedItem, getNeeds, priorityLabels, createDonation } from "@/lib/api";
 import NeedCard from "@/components/NeedCard";
-import DonateModal from "@/components/DonateModal";
+import DonateModal, { type DonationFormData } from "@/components/DonateModal";
 import EditNeedModal from "@/components/EditNeedModal";
 import { deleteNeed } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
@@ -306,16 +306,31 @@ export default function NeedsPage() {
             setDonateError("");
             setDonateSuccess(false);
           }}
-          onSubmit={async (quantity: number, message?: string) => {
+          onSubmit={async (donationData: DonationFormData) => {
             setDonateLoading(true);
             setDonateError("");
             setDonateSuccess(false);
             try {
               await createDonation({
                 need_item: donateNeed.id,
-                quantity,
-                message,
+                quantity: donationData.quantity,
+                message: donationData.message,
                 donor: user?.id || null,
+                donor_type: donationData.donorType,
+                donor_name: donationData.donorName,
+                donor_contact: donationData.donorContact,
+                donor_organization: donationData.donorOrganization,
+                donor_address: donationData.donorAddress,
+                donor_email: donationData.donorEmail,
+                donor_phone: donationData.donorPhone,
+                government_department: donationData.governmentDepartment,
+                government_program: donationData.governmentProgram,
+                government_officer_name: donationData.governmentOfficerName,
+                government_officer_designation:
+                  donationData.governmentOfficerDesignation,
+                government_officer_contact:
+                  donationData.governmentOfficerContact,
+                estimated_delivery_date: donationData.estimatedDeliveryDate,
               });
               setDonateSuccess(true);
               // Refresh needs after donation and close modal only after update
@@ -324,7 +339,7 @@ export default function NeedsPage() {
               setDonateNeed(null);
               setDonateSuccess(false);
             } catch (err: any) {
-              setDonateError(err.message || "Failed to donate");
+              setDonateError(err.message || "Failed to pledge donation");
             } finally {
               setDonateLoading(false);
             }
