@@ -311,27 +311,70 @@ export default function NeedsPage() {
             setDonateError("");
             setDonateSuccess(false);
             try {
-              await createDonation({
-                need_item: donateNeed.id,
-                quantity: donationData.quantity,
-                message: donationData.message,
-                donor: user?.id || null,
-                donor_type: donationData.donorType,
-                donor_name: donationData.donorName,
-                donor_contact: donationData.donorContact,
-                donor_organization: donationData.donorOrganization,
-                donor_address: donationData.donorAddress,
-                donor_email: donationData.donorEmail,
-                donor_phone: donationData.donorPhone,
-                government_department: donationData.governmentDepartment,
-                government_program: donationData.governmentProgram,
-                government_officer_name: donationData.governmentOfficerName,
-                government_officer_designation:
-                  donationData.governmentOfficerDesignation,
-                government_officer_contact:
-                  donationData.governmentOfficerContact,
-                estimated_delivery_date: donationData.estimatedDeliveryDate,
+              // Create FormData to handle file upload
+              const formData = new FormData();
+              formData.append("need_item", String(donateNeed.id));
+              formData.append("quantity", String(donationData.quantity));
+              formData.append("message", donationData.message || "");
+              formData.append("donor", String(user?.id || null));
+              formData.append("donor_type", donationData.donorType);
+              formData.append("donor_name", donationData.donorName || "");
+              formData.append("donor_contact", donationData.donorContact || "");
+              formData.append(
+                "donor_organization",
+                donationData.donorOrganization || "",
+              );
+              formData.append("donor_address", donationData.donorAddress || "");
+              formData.append("donor_email", donationData.donorEmail || "");
+              formData.append("donor_phone", donationData.donorPhone || "");
+              formData.append(
+                "government_department",
+                donationData.governmentDepartment || "",
+              );
+              formData.append(
+                "government_program",
+                donationData.governmentProgram || "",
+              );
+              formData.append(
+                "government_officer_name",
+                donationData.governmentOfficerName || "",
+              );
+              formData.append(
+                "government_officer_designation",
+                donationData.governmentOfficerDesignation || "",
+              );
+              formData.append(
+                "government_officer_contact",
+                donationData.governmentOfficerContact || "",
+              );
+              formData.append(
+                "estimated_delivery_date",
+                donationData.estimatedDeliveryDate || "",
+              );
+
+              // Append the letter file if provided
+              if (donationData.letterFile) {
+                formData.append(
+                  "donation_letter_file",
+                  donationData.letterFile,
+                );
+              }
+
+              // Use FormData with custom createDonation function
+              const api_url =
+                process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+              const response = await fetch(`${api_url}/api/donations/`, {
+                method: "POST",
+                body: formData,
               });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(
+                  errorData.detail || "Failed to create donation",
+                );
+              }
+
               setDonateSuccess(true);
               // Refresh needs after donation and close modal only after update
               const data = await getNeeds(priorityFilter || undefined);

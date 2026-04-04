@@ -448,7 +448,7 @@ export default function OrganizationsPage() {
       {/* Add Section Modal */}
       {showAddSection && organization && (
         <AddSectionModal
-          organization={organization}
+          organizationId={organization.id}
           onClose={() => setShowAddSection(false)}
           onSuccess={() => {
             setShowAddSection(false);
@@ -461,9 +461,8 @@ export default function OrganizationsPage() {
       {/* Manual Need Entry Form (for adding needs) */}
       {addNeedForSection && organization && (
         <ManualNeedEntryForm
-          section={organization.sections?.find(
-            (s) => s.id === addNeedForSection.sectionId,
-          )}
+          initialOrgId={organization.id}
+          initialSectionId={addNeedForSection.sectionId}
           onClose={() => setAddNeedForSection(null)}
           onSuccess={() => {
             setAddNeedForSection(null);
@@ -526,7 +525,6 @@ export default function OrganizationsPage() {
       {editSection && organization && (
         <EditSectionModal
           section={editSection}
-          organization={organization}
           onClose={() => setEditSection(null)}
           onSuccess={() => {
             setEditSection(null);

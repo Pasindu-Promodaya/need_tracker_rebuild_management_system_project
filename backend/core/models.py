@@ -43,6 +43,14 @@ class Donation(models.Model):
     government_officer_designation = models.CharField(max_length=200, blank=True)
     government_officer_contact = models.CharField(max_length=200, blank=True)
 
+    # Donation confirmation letter
+    donation_letter_file = models.FileField(
+        upload_to='donation_letters/',
+        null=True,
+        blank=True,
+        help_text="Uploaded signed donation confirmation letter (PDF)"
+    )
+
     def __str__(self):
         return f"Donation by {self.donor_name or self.donor or 'Guest'} for {self.need_item.name} ({self.quantity})"
 
