@@ -53,9 +53,9 @@ export default function ManualNeedEntryForm({
       .finally(() => setLoadingOrgs(false));
   }, []);
 
-  const selectedOrg = organizations.find(
-    (o) => o.id.toString() === form.organization_id,
-  );
+  const selectedOrg = Array.isArray(organizations)
+    ? organizations.find((o) => o.id.toString() === form.organization_id)
+    : undefined;
   const sections = selectedOrg?.sections ?? [];
 
   function handleOrgChange(orgId: string) {
@@ -221,11 +221,13 @@ export default function ManualNeedEntryForm({
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                   >
                     <option value="">Select organization…</option>
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name} — {org.district}
-                      </option>
-                    ))}
+                    {Array.isArray(organizations)
+                      ? organizations.map((org) => (
+                          <option key={org.id} value={org.id}>
+                            {org.name} — {org.district}
+                          </option>
+                        ))
+                      : null}
                   </select>
                 )}
               </div>
