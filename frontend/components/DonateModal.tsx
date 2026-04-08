@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   NeedItem,
   getSection,
@@ -8,6 +8,11 @@ import {
   Section,
   Organization,
 } from "@/lib/api";
+import { DonationLetterTemplate } from "./DonationLetterTemplate";
+import {
+  generateDonationLetterPDF,
+  convertLetterToBlob,
+} from "@/lib/pdfGenerator";
 
 interface DonateModalProps {
   need: NeedItem;
@@ -33,6 +38,7 @@ export interface DonationFormData {
   governmentOfficerContact?: string;
   estimatedDeliveryDate?: string;
   confirmApproval: boolean;
+  letterFile?: File;
 }
 
 export default function DonateModal({
@@ -69,6 +75,13 @@ export default function DonateModal({
     useState("");
   const [governmentOfficerContact, setGovernmentOfficerContact] = useState("");
 
+  // Donation letter fields
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [letterFile, setLetterFile] = useState<File | null>(null);
+  const [showLetterPreview, setShowLetterPreview] = useState(false);
+  const letterRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Fetch section and organization details
   useEffect(() => {
     if (!isOpen) return;
@@ -88,6 +101,13 @@ export default function DonateModal({
     };
 
     fetchDetails();
+
+    // Generate reference number
+    const timestamp = new Date().getTime().toString().slice(-8);
+    const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setReferenceNumber(`DONATION-${timestamp}-${randomId}`);
+    setLetterFile(null);
+    setShowLetterPreview(false);
   }, [isOpen, need.section]);
 
   if (!isOpen) return null;
@@ -144,6 +164,14 @@ export default function DonateModal({
       }
     }
 
+    // Validate donation letter file (mandatory)
+    if (!letterFile) {
+      setError(
+        "Please upload the signed donation confirmation letter before submitting",
+      );
+      return;
+    }
+
     setError("");
     onSubmit({
       quantity,
@@ -162,6 +190,7 @@ export default function DonateModal({
       governmentOfficerContact,
       estimatedDeliveryDate,
       confirmApproval,
+      letterFile,
     });
   };
 
@@ -425,7 +454,7 @@ export default function DonateModal({
             <div className="pledge-form-row">
               <div className="pledge-form-group">
                 <label className="pledge-label">
-                  Quantity Pledging: [{quantity}] (Max: {maxQuantity})
+                  Quantity Pledging: (Max: {maxQuantity})
                 </label>
                 <input
                   type="number"
@@ -471,7 +500,191 @@ export default function DonateModal({
             )}
           </div>
 
-          {/* 4. CONFIRMATION */}
+          {/* 4. DONATION CONFIRMATION LETTER */}
+          <div className="pledge-section">
+            <h3 className="pledge-section-title">
+              4. DONATION CONFIRMATION LETTER
+            </h3>
+
+            {/* Reference Number Display */}
+            <div className="pledge-form-row">
+              <div className="pledge-form-group">
+                <label className="pledge-label">Reference Number:</label>
+                <div className="pledge-reference-display">
+                  <code>{referenceNumber}</code>
+                </div>
+              </div>
+            </div>
+
+            {/* Letter Preview Button */}
+            <div className="pledge-form-row pledge-form-row-spaced">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLetterPreview(!showLetterPreview);
+                  setError("");
+                }}
+                className="pledge-btn pledge-btn-secondary"
+                aria-label="Toggle donation letter preview"
+              >
+                {showLetterPreview ? "Hide" : "Show"} Letter Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!showLetterPreview) {
+                    setError(
+                      'Please click "Show Letter Preview" button to view the letter before downloading the PDF',
+                    );
+                    return;
+                  }
+                  if (letterRef.current) {
+                    generateDonationLetterPDF(
+                      letterRef.current,
+                      referenceNumber,
+                    );
+                  }
+                }}
+                className="pledge-btn pledge-btn-download"
+                aria-label="Download donation letter as PDF"
+              >
+                📥 Download Letter as PDF
+              </button>
+            </div>
+
+            {error && (
+              <div className="pledge-error-message pledge-error-message-spaced">
+                {error}
+              </div>
+            )}
+
+            {/* Letter Preview (Hidden by default) */}
+            {showLetterPreview && (
+              <div className="pledge-letter-preview">
+                <div ref={letterRef}>
+                  {section && organization ? (
+                    <DonationLetterTemplate
+                      donation={{
+                        quantity,
+                        message,
+                        donorType,
+                        donorName,
+                        donorOrganization,
+                        donorContact,
+                        donorEmail,
+                        donorPhone,
+                        governmentDepartment,
+                        governmentProgram,
+                        governmentOfficerName,
+                        governmentOfficerDesignation,
+                        governmentOfficerContact,
+                        estimatedDeliveryDate,
+                        confirmApproval,
+                        need: {
+                          name: need.name,
+                          description: need.description || "",
+                          quantity_required: need.quantity_required,
+                        },
+                        organization: {
+                          name: organization.name,
+                          registration_number:
+                            organization.registration_number || "",
+                          address: organization.address || "",
+                        },
+                        section: {
+                          name: section.name,
+                        },
+                      }}
+                      referenceNumber={referenceNumber}
+                    />
+                  ) : (
+                    <div className="pledge-loading">
+                      Loading letter template...
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* File Upload for Signed Letter */}
+            <div className="pledge-form-row">
+              <div className="pledge-form-group">
+                <label className="pledge-label">
+                  Upload Signed Letter (PDF) *{" "}
+                  <span className="pledge-required">Required</span>
+                </label>
+                <div className="pledge-file-upload">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.type !== "application/pdf") {
+                          setError("Please upload a PDF file only");
+                          return;
+                        }
+                        if (file.size > 10 * 1024 * 1024) {
+                          setError("File size must be less than 10MB");
+                          return;
+                        }
+                        setLetterFile(file);
+                        setError("");
+                      }
+                    }}
+                    className="pledge-file-input"
+                    aria-label="Upload signed donation letter PDF"
+                  />
+                  <div className="pledge-file-label">
+                    {letterFile ? (
+                      <div className="pledge-file-success">
+                        <span className="pledge-file-icon">✓</span>
+                        <div className="pledge-file-info">
+                          <div className="pledge-file-name">
+                            {letterFile.name}
+                          </div>
+                          <div className="pledge-file-size">
+                            ({(letterFile.size / 1024).toFixed(2)} KB)
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pledge-file-placeholder">
+                        <span className="pledge-file-icon-empty">📄</span>
+                        <p>Click to upload your signed letter</p>
+                        <span className="pledge-file-hint">
+                          PDF only, max 10MB
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {letterFile && (
+                  <div className="pledge-file-remove-container">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLetterFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = "";
+                        }
+                      }}
+                      className="pledge-file-remove-btn"
+                      aria-label="Remove uploaded file"
+                      title="Remove file"
+                    >
+                      ✕ Remove File
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 5. CONFIRMATION */}
           <div className="pledge-section">
             <label className="pledge-checkbox-label">
               <input
@@ -488,8 +701,6 @@ export default function DonateModal({
               </span>
             </label>
           </div>
-
-          {error && <div className="pledge-error-message">{error}</div>}
 
           <div className="pledge-button-group">
             <button
