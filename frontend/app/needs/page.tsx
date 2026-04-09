@@ -130,7 +130,12 @@ export default function NeedsPage() {
       {sortedNeeds.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sortedNeeds.map((need) => (
-            <NeedCard key={need.id} need={need} showSection />
+            <NeedCard 
+              key={need.id} 
+              need={need} 
+              showSection 
+              organizationName={need.section_detail?.organization_name}
+            />
           ))}
         </div>
       ) : (

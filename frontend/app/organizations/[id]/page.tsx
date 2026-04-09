@@ -249,7 +249,8 @@ export default function OrganizationDetailPage() {
             {organization.sections.map((section, index) => (
               <SectionAccordion 
                 key={section.id} 
-                section={section} 
+                section={section}
+                organizationName={organization.name}
                 defaultOpen={index === 0}
               />
             ))}

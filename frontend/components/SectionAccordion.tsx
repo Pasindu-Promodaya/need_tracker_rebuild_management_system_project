@@ -6,10 +6,11 @@ import NeedCard from './NeedCard';
 
 interface SectionAccordionProps {
   section: Section;
+  organizationName?: string;
   defaultOpen?: boolean;
 }
 
-export default function SectionAccordion({ section, defaultOpen = false }: SectionAccordionProps) {
+export default function SectionAccordion({ section, organizationName, defaultOpen = false }: SectionAccordionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const criticalCount = section.needs?.filter(n => n.priority === 'CRITICAL').length || 0;
@@ -76,7 +77,12 @@ export default function SectionAccordion({ section, defaultOpen = false }: Secti
           {section.needs && section.needs.length > 0 ? (
             <div className="grid gap-4 mt-4 sm:grid-cols-2 lg:grid-cols-3">
               {section.needs.map((need) => (
-                <NeedCard key={need.id} need={need} />
+                <NeedCard 
+                  key={need.id} 
+                  need={need}
+                  sectionName={section.name}
+                  organizationName={organizationName}
+                />
               ))}
             </div>
           ) : (

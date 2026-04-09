@@ -29,6 +29,12 @@ export interface NeedItem {
   unit: 'UNIT' | 'BOX' | 'KG' | 'LITER';
   description: string;
   created_at: string;
+  section_detail?: {
+    id: number;
+    name: string;
+    organization: number;
+    organization_name: string;
+  };
 }
 
 export interface Section {
@@ -62,6 +68,35 @@ export interface DocumentUpload {
   uploaded_at: string;
   status: 'PENDING' | 'PROCESSED' | 'APPROVED' | 'FAILED';
   ai_extracted_json: Record<string, unknown> | null;
+}
+
+export interface Donation {
+  id: number;
+  donor: number | null;
+  need_item: number;
+  quantity: number;
+  status: 'PENDING' | 'CONFIRMED' | 'FULFILLED' | 'CANCELLED';
+  message: string;
+  estimated_delivery_date: string | null;
+  created_at: string;
+  donor_type: 'private' | 'government';
+  donor_name: string;
+  donor_contact: string;
+  donor_organization: string;
+  donor_address: string;
+  donor_email: string;
+  donor_phone: string;
+  government_department: string;
+  government_program: string;
+  government_officer_name: string;
+  government_officer_designation: string;
+  government_officer_contact: string;
+  donation_letter_file: string | null;
+  need_item_detail?: {
+    id: number;
+    name: string;
+    unit: string;
+  };
 }
 
 // API Functions
@@ -135,6 +170,53 @@ export async function registerUser(data: any): Promise<AuthResponse> {
     });
 }
 
+export async function registerOrgAdmin(data: {
+    username: string;
+    password: string;
+    password2: string;
+    email: string;
+    phone_number: string;
+    first_name: string;
+    last_name: string;
+    organization_name: string;
+}): Promise<any> {
+    return fetchAPI<any>('/auth/register-org-admin/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function getAdminApprovals(): Promise<any> {
+    const token = localStorage.getItem('accessToken');
+    return fetchAPI<any>('/admin/approvals/', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+}
+
+export async function approveOrgAdmin(userId: number): Promise<any> {
+    const token = localStorage.getItem('accessToken');
+    return fetchAPI<any>(`/admin/approvals/${userId}/approve/`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+}
+
+export async function rejectOrgAdmin(userId: number, reason: string): Promise<any> {
+    const token = localStorage.getItem('accessToken');
+    return fetchAPI<any>(`/admin/approvals/${userId}/reject/`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
+    });
+}
+
 export async function getCurrentUser(): Promise<User> {
     return fetchAPI<User>('/auth/me/', {
         method: 'GET',
@@ -159,7 +241,10 @@ export async function updateCurrentUser(data: {
 // --- END AUTH FUNCTIONS ---
 
 // Organizations
-export const getOrganizations = () => fetchAPI<Organization[]>('/organizations/');
+export const getOrganizations = async () => {
+  const response = await fetchAPI<any>('/organizations/');
+  return (response.results || response) as Organization[];
+};
 export const getOrganization = (id: number) => fetchAPI<Organization>(`/organizations/${id}/`);
 export const getOrganizationHierarchy = (id: number) => fetchAPI<Organization>(`/organizations/${id}/hierarchy/`);
 export const createOrganization = (data: Partial<Organization>) => 
@@ -170,24 +255,37 @@ export const deleteOrganization = (id: number) =>
   fetchAPI<void>(`/organizations/${id}/`, { method: 'DELETE' });
 
 // Sections
-export const getSections = () => fetchAPI<Section[]>('/sections/');
+export const getSections = async () => {
+  const response = await fetchAPI<any>('/sections/');
+  return (response.results || response) as Section[];
+};
 export const getSection = (id: number) => fetchAPI<Section>(`/sections/${id}/`);
 export const createSection = (data: Partial<Section>) => 
   fetchAPI<Section>('/sections/', { method: 'POST', body: JSON.stringify(data) });
+export const updateSection = (id: number, data: Partial<Section>) =>
+  fetchAPI<Section>(`/sections/${id}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteSection = (id: number) =>
+  fetchAPI<void>(`/sections/${id}/`, { method: 'DELETE' });
 
 // Needs
-export const getNeeds = (priority?: string) => {
+export const getNeeds = async (priority?: string) => {
   const query = priority ? `?priority=${priority}` : '';
-  return fetchAPI<NeedItem[]>(`/needs/${query}`);
+  const response = await fetchAPI<any>(`/needs/${query}`);
+  return (response.results || response) as NeedItem[];
 };
 export const getNeed = (id: number) => fetchAPI<NeedItem>(`/needs/${id}/`);
 export const createNeed = (data: Partial<NeedItem>) => 
   fetchAPI<NeedItem>('/needs/', { method: 'POST', body: JSON.stringify(data) });
 export const updateNeed = (id: number, data: Partial<NeedItem>) => 
   fetchAPI<NeedItem>(`/needs/${id}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteNeed = (id: number) =>
+  fetchAPI<void>(`/needs/${id}/`, { method: 'DELETE' });
 
 // Documents
-export const getDocuments = () => fetchAPI<DocumentUpload[]>('/documents/');
+export const getDocuments = async () => {
+  const response = await fetchAPI<any>('/documents/');
+  return (response.results || response) as DocumentUpload[];
+};
 export const uploadDocument = async (file: File, organizationId: number, userId: number) => {
   const formData = new FormData();
   formData.append('file', file);
@@ -215,6 +313,23 @@ export const uploadDocument = async (file: File, organizationId: number, userId:
   return response.json();
 };
 
+// Donations
+export const createDonation = (data: Partial<Donation>) =>
+  fetchAPI<Donation>('/donations/', { method: 'POST', body: JSON.stringify(data) });
+
+export const getDonations = async () => {
+  const response = await fetchAPI<any>('/donations/');
+  return (response.results || response) as Donation[];
+};
+
+export const getDonation = (id: number) => fetchAPI<Donation>(`/donations/${id}/`);
+
+export const updateDonation = (id: number, data: Partial<Donation>) =>
+  fetchAPI<Donation>(`/donations/${id}/`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export const deleteDonation = (id: number) =>
+  fetchAPI<void>(`/donations/${id}/`, { method: 'DELETE' });
+
 // Priority helpers
 export const priorityColors = {
   CRITICAL: 'bg-red-100 text-red-800 border-red-300',
@@ -241,3 +356,43 @@ export const statusColors = {
   APPROVED: 'bg-green-100 text-green-800',
   FAILED: 'bg-red-100 text-red-800',
 };
+
+// Search interface and function
+export interface SearchResult {
+  organizations: Organization[];
+  needs: NeedItem[];
+  total: number;
+}
+
+export async function search(
+  query: string,
+  type: 'organization' | 'need' | 'all' = 'all',
+  options?: {
+    priority?: string;
+    org_type?: string;
+    limit?: number;
+    offset?: number;
+  }
+): Promise<SearchResult> {
+  const params = new URLSearchParams({
+    q: query,
+    type,
+    ...(options?.priority && { priority: options.priority }),
+    ...(options?.org_type && { org_type: options.org_type }),
+    limit: String(options?.limit || 50),
+    offset: String(options?.offset || 0),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/search/?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Search failed');
+  }
+
+  return response.json();
+}

@@ -150,7 +150,12 @@ export default function Dashboard() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {criticalNeeds.slice(0, 6).map((need) => (
-              <NeedCard key={need.id} need={need} showSection />
+              <NeedCard 
+                key={need.id} 
+                need={need} 
+                showSection 
+                organizationName={need.section_detail?.organization_name}
+              />
             ))}
           </div>
         </div>

@@ -1,16 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { updateCurrentUser } from '@/lib/api';
+import { Search } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout, setUser } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'password'>('info');
+  const [searchQuery, setSearchQuery] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Profile form state
@@ -86,6 +89,14 @@ export default function Navbar() {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'ORG_ADMIN';
 
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery('');
+    }
+  };
+
   const publicNavLinks = [
     { href: '/', label: 'Home' },
     { href: '/needs', label: 'Current Needs' },
@@ -97,6 +108,10 @@ export default function Navbar() {
         { href: '/organizations', label: 'Organizations' },
         { href: '/needs', label: 'All Needs' },
         { href: '/documents', label: 'Documents' },
+        ...(user?.role === 'ADMIN' ? [
+          { href: '/admin', label: 'Donations' },
+          { href: '/admin/approvals', label: 'Approvals' }
+        ] : []),
       ]
     : [
         { href: '/', label: 'Dashboard' },
@@ -137,6 +152,20 @@ export default function Navbar() {
                 </Link>
               ))}
             </div>
+
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="hidden md:flex items-center ml-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="pl-10 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent w-32"
+                />
+              </div>
+            </form>
             </div>
 
           {/* Right side */}

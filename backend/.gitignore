@@ -1,4 +1,5 @@
 # Python
+
 *.py[cod]
 *$py.class
 *.so
@@ -20,6 +21,10 @@ venv/
 env/
 ENV/
 .venv
+
+# Node modules (frontend)
+node_modules/
+.pnpm-debug.log*
 
 # IDE
 .vscode/
