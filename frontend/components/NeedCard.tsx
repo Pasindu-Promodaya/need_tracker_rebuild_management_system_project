@@ -1,175 +1,152 @@
-import { NeedItem, priorityLabels, unitLabels } from "@/lib/api";
-import "./NeedCard.css";
-import "../app/donor-modal-custom.css";
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@/lib/AuthContext';
+import { NeedItem, priorityColors, priorityLabels, unitLabels } from '@/lib/api';
+import DonateModal from './DonateModal';
+import { Heart, LogIn } from 'lucide-react';
+import Link from 'next/link';
 
 interface NeedCardProps {
   need: NeedItem;
   showSection?: boolean;
   sectionName?: string;
+  organizationName?: string;
+  onDonationSuccess?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
-  onDonate?: (need: NeedItem) => void;
-  showDonateButton?: boolean;
 }
 
-export default function NeedCard({
-  need,
-  showSection,
-  sectionName,
-  onEdit,
-  onDelete,
-  onDonate,
-  showDonateButton,
-}: NeedCardProps) {
-  const progress =
-    need.quantity_required > 0
-      ? Math.min((need.quantity_received / need.quantity_required) * 100, 100)
-      : 0;
-
+export default function NeedCard({ need, showSection, sectionName, organizationName, onDonationSuccess, onEdit, onDelete }: NeedCardProps) {
+  const { user } = useAuth();
+  const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
+  
+  const progress = need.quantity_required > 0 
+    ? Math.min((need.quantity_received / need.quantity_required) * 100, 100) 
+    : 0;
+  
   const remaining = need.quantity_required - need.quantity_received;
 
+  const handleDonationSuccess = () => {
+    setIsDonateModalOpen(false);
+    onDonationSuccess?.();
+  };
+
   return (
-    <div className="need-card">
-      <div className="need-card__header">
-        <div className="need-card__title-wrap">
-          <h3 className="need-card__title">{need.name}</h3>
-          {showSection && sectionName && (
-            <p className="need-card__section">{sectionName}</p>
-          )}
+    <>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900">{need.name}</h3>
+            {organizationName && (
+              <p className="text-xs text-gray-700 font-medium">{organizationName}</p>
+            )}
+            {showSection && sectionName && (
+              <p className="text-sm text-gray-500">{sectionName}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${priorityColors[need.priority]}`}>
+              {priorityLabels[need.priority]}
+            </span>
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                title="Edit"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                title="Delete"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
-        <span
-          className={`need-card__priority need-card__priority--${String(
-            need.priority,
-          ).toLowerCase()}`}
-        >
-          {priorityLabels[need.priority]}
-        </span>
+
+        {need.description && (
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{need.description}</p>
+        )}
+
+        {/* Progress Bar */}
+        <div className="mb-3">
+          <div className="flex justify-between text-sm mb-1">
+            <span className="text-gray-600">Progress</span>
+            <span className="font-medium text-gray-900">{progress.toFixed(0)}%</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className={`h-full rounded-full transition-all ${
+                progress >= 100 ? 'bg-green-500' : 
+                progress >= 50 ? 'bg-blue-500' : 
+                progress >= 25 ? 'bg-yellow-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Quantities */}
+        <div className="flex justify-between text-sm mb-4">
+          <div>
+            <span className="text-gray-500">Received: </span>
+            <span className="font-medium text-green-600">
+              {need.quantity_received} {unitLabels[need.unit]}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-500">Needed: </span>
+            <span className={`font-medium ${remaining > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {remaining > 0 ? remaining : 0} {unitLabels[need.unit]}
+            </span>
+          </div>
+        </div>
+
+        {/* Donate Button */}
+        {remaining > 0 && (
+          <>
+            {user ? (
+              <button
+                onClick={() => setIsDonateModalOpen(true)}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              >
+                <Heart size={18} />
+                Donate
+              </button>
+            ) : (
+              <Link href="/login">
+                <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm flex items-center justify-center gap-2">
+                  <LogIn size={18} />
+                  Sign in to Donate
+                </button>
+              </Link>
+            )}
+          </>
+        )}
+        {remaining <= 0 && (
+          <div className="w-full px-4 py-2 bg-green-100 text-green-800 rounded-lg text-center font-medium text-sm">
+            ✓ Requirement Fulfilled
+          </div>
+        )}
       </div>
 
-      {need.description && (
-        <p className="need-card__description">{need.description}</p>
-      )}
-
-      {/* Progress Bar */}
-      <div className="need-card__progress-block">
-        <div className="need-card__progress-header">
-          <span className="need-card__muted">Progress</span>
-          <span className="need-card__strong">{progress.toFixed(0)}%</span>
-        </div>
-        <progress
-          className={`need-progress ${
-            progress >= 100
-              ? "need-progress--complete"
-              : progress >= 50
-                ? "need-progress--good"
-                : progress >= 25
-                  ? "need-progress--medium"
-                  : "need-progress--low"
-          }`}
-          value={progress}
-          max={100}
-          aria-label={`Progress for ${need.name}`}
-        />
-      </div>
-
-      {/* Quantities */}
-      <div className="need-card__quantities">
-        <div>
-          <span className="need-card__muted">Received: </span>
-          <span className="need-card__received">
-            {need.quantity_received} {unitLabels[need.unit]}
-          </span>
-        </div>
-        <div>
-          <span className="need-card__muted">Needed: </span>
-          <span
-            className={`need-card__needed ${
-              remaining > 0
-                ? "need-card__needed--remaining"
-                : "need-card__needed--complete"
-            }`}
-          >
-            {remaining > 0 ? remaining : 0} {unitLabels[need.unit]}
-          </span>
-        </div>
-      </div>
-
-      {/* Actions */}
-      {(onEdit || onDelete || (showDonateButton && onDonate)) && (
-        <div className="need-card__actions">
-          {onEdit && (
-            <button
-              onClick={onEdit}
-              title="Edit need"
-              className="need-card__action-btn need-card__action-btn--edit"
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-              Edit
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={onDelete}
-              title="Delete need"
-              className="need-card__action-btn need-card__action-btn--delete"
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-              Delete
-            </button>
-          )}
-          {showDonateButton && onDonate && (
-            <button
-              onClick={() => onDonate(need)}
-              disabled={need.quantity_received >= need.quantity_required}
-              title={
-                need.quantity_received >= need.quantity_required
-                  ? "Need fulfilled"
-                  : "Donate to this need"
-              }
-              className={`donate-btn-custom ${need.quantity_received >= need.quantity_required ? "donate-btn-disabled" : ""}`}
-            >
-              <svg
-                className="w-4 h-4 mr-1 -mt-0.5"
-                fill="none"
-                stroke="#2563eb"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 13c-4.418 0-8-3.582-8-8 0-3.314 2.686-6 6-6 1.306 0 2.417.835 2.83 2H12c-2.21 0-4 1.79-4 4 0 2.21 1.79 4 4 4s4-1.79 4-4c0-.553-.112-1.078-.312-1.563C16.417 9.835 17.528 9 18.834 9c3.314 0 6 2.686 6 6 0 4.418-3.582 8-8 8z"
-                />
-              </svg>
-              <span className="donate-btn-text">Donate</span>
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+      {/* Donate Modal */}
+      <DonateModal 
+        needItem={need}
+        isOpen={isDonateModalOpen}
+        onClose={() => setIsDonateModalOpen(false)}
+        onSuccess={handleDonationSuccess}
+      />
+    </>
   );
 }

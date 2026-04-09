@@ -62,8 +62,30 @@ class User(AbstractUser):
         ('ORG_ADMIN', 'Hospital/Org Admin'),
         ('DONOR', 'Donor'),
     )
+    
+    APPROVAL_STATUS_CHOICES = (
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    )
+    
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='DONOR')
     phone_number = models.CharField(max_length=15, blank=True)
+    
+    # For org admin approval workflow
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='APPROVED'  # Donors and existing admins are pre-approved
+    )
+    requested_organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admin_requests'
+    )
+    rejection_reason = models.TextField(blank=True, help_text="Reason for rejecting org admin request")
 
     def save(self, *args, **kwargs):
         """
@@ -102,8 +124,13 @@ class Organization(models.Model):
     website = models.URLField(blank=True)
     established_year = models.IntegerField(null=True, blank=True)
 
-    # Link an admin user to this organization
-    admin_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="managed_orgs")
+    # One-to-One relationship: One admin manages exactly ONE organization
+    admin_user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, related_name="managed_org")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name'], name='unique_organization_name')
+        ]
 
     def __str__(self):
         return self.name
@@ -171,4 +198,52 @@ class DocumentUpload(models.Model):
 
     def __str__(self):
         return f"Doc {self.id} - {self.status}"
+
+
+# 6. DONATIONS (Track donations made towards NeedItems)
+class Donation(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('CONFIRMED', 'Confirmed'),
+        ('FULFILLED', 'Fulfilled'),
+        ('CANCELLED', 'Cancelled'),
+    )
+    
+    DONOR_TYPE_CHOICES = (
+        ('private', 'Private Donor'),
+        ('government', 'Government'),
+    )
+
+    # Basic donation info
+    donor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="donations")
+    need_item = models.ForeignKey(NeedItem, on_delete=models.CASCADE, related_name="donations")
+    quantity = models.IntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    message = models.TextField(blank=True)
+    estimated_delivery_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Donor type and details (supports both private and government donations)
+    donor_type = models.CharField(max_length=20, choices=DONOR_TYPE_CHOICES, default='private')
+    
+    # Private donor information
+    donor_name = models.CharField(max_length=200, blank=True)
+    donor_contact = models.CharField(max_length=50, blank=True)
+    donor_organization = models.CharField(max_length=200, blank=True)
+    donor_address = models.TextField(blank=True)
+    donor_email = models.EmailField(blank=True)
+    donor_phone = models.CharField(max_length=20, blank=True)
+    
+    # Government donor information
+    government_department = models.CharField(max_length=200, blank=True)
+    government_program = models.CharField(max_length=200, blank=True)
+    government_officer_name = models.CharField(max_length=200, blank=True)
+    government_officer_designation = models.CharField(max_length=100, blank=True)
+    government_officer_contact = models.CharField(max_length=20, blank=True)
+    
+    # Donation letter (PDF)
+    donation_letter_file = models.FileField(upload_to='donation_letters/', null=True, blank=True)
+
+    def __str__(self):
+        return f"Donation {self.id} - {self.quantity} units of {self.need_item.name}"
 

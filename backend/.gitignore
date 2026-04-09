@@ -1,4 +1,5 @@
 # Python
+
 *.py[cod]
 *$py.class
 *.so
@@ -25,6 +26,10 @@ ENV/
 .venv/
 pip-log.txt
 pip-delete-this-directory.txt
+
+# Node modules (frontend)
+node_modules/
+.pnpm-debug.log*
 
 # IDE & Editors
 .vscode/
