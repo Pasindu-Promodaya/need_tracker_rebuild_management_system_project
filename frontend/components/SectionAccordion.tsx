@@ -8,9 +8,23 @@ interface SectionAccordionProps {
   section: Section;
   organizationName?: string;
   defaultOpen?: boolean;
+  onAddNeed?: () => void;
+  onEditNeed?: (needId: number) => void;
+  onDeleteNeed?: (needId: number) => void;
+  onEditSection?: () => void;
+  onDeleteSection?: () => Promise<void>;
 }
 
-export default function SectionAccordion({ section, organizationName, defaultOpen = false }: SectionAccordionProps) {
+export default function SectionAccordion({ 
+  section, 
+  organizationName, 
+  defaultOpen = false,
+  onAddNeed,
+  onEditNeed,
+  onDeleteNeed,
+  onEditSection,
+  onDeleteSection
+}: SectionAccordionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const criticalCount = section.needs?.filter(n => n.priority === 'CRITICAL').length || 0;
@@ -74,6 +88,42 @@ export default function SectionAccordion({ section, organizationName, defaultOpe
 
       {isOpen && (
         <div className="px-6 pb-6 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4 pt-4">
+            {onAddNeed && (
+              <button
+                onClick={onAddNeed}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Need
+              </button>
+            )}
+            <div className="flex items-center gap-2 ml-auto">
+              {onEditSection && (
+                <button
+                  onClick={onEditSection}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+              {onDeleteSection && (
+                <button
+                  onClick={onDeleteSection}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
           {section.needs && section.needs.length > 0 ? (
             <div className="grid gap-4 mt-4 sm:grid-cols-2 lg:grid-cols-3">
               {section.needs.map((need) => (
@@ -82,6 +132,8 @@ export default function SectionAccordion({ section, organizationName, defaultOpe
                   need={need}
                   sectionName={section.name}
                   organizationName={organizationName}
+                  onEdit={onEditNeed ? () => onEditNeed(need.id) : undefined}
+                  onDelete={onDeleteNeed ? () => onDeleteNeed(need.id) : undefined}
                 />
               ))}
             </div>

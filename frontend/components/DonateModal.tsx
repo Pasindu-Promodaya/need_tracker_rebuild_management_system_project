@@ -5,6 +5,24 @@ import Link from 'next/link';
 import { NeedItem, Donation } from '@/lib/api';
 import { Loader2, X } from 'lucide-react';
 
+export interface DonationFormData {
+  quantity: number;
+  message: string;
+  estimatedDeliveryDate: string;
+  donorType: 'private' | 'government';
+  donorName: string;
+  donorEmail: string;
+  donorPhone: string;
+  donorOrganization: string;
+  donorAddress: string;
+  donorContact: string;
+  governmentDepartment: string;
+  governmentProgram: string;
+  governmentOfficerName: string;
+  governmentOfficerDesignation: string;
+  governmentOfficerContact: string;
+}
+
 interface DonateModalProps {
   needItem: NeedItem;
   isOpen: boolean;

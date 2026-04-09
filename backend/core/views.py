@@ -261,7 +261,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
-    permission_classes = [IsOrgAdminOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
 
 
 # 3. Needs ViewSet

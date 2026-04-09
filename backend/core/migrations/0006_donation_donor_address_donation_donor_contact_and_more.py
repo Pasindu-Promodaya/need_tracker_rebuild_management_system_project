@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0005_alter_donation_id_alter_needitem_id_and_more'),
+        ('core', '0005_user_approval_status_user_rejection_reason_and_more'),
     ]
 
     operations = [
