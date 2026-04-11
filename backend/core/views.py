@@ -503,8 +503,11 @@ class AdminApprovalViewSet(viewsets.ViewSet):
             )
         
         # Approve the user and assign them to the organization
+        from django.utils import timezone
         user.approval_status = 'APPROVED'
         user.rejection_reason = ''
+        user.approval_decided_at = timezone.now()
+        user.approval_decided_by = request.user
         user.save()
         
         # Link the organization to this admin (if organization exists)
@@ -540,8 +543,11 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         
         reason = request.data.get('reason', 'No reason provided')
         
+        from django.utils import timezone
         user.approval_status = 'REJECTED'
         user.rejection_reason = reason
+        user.approval_decided_at = timezone.now()
+        user.approval_decided_by = request.user
         user.save()
         
         return Response({

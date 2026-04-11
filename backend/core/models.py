@@ -59,7 +59,7 @@ class Donation(models.Model):
 class User(AbstractUser):
     ROLE_CHOICES = (
         ('ADMIN', 'System Admin'),
-        ('ORG_ADMIN', 'Hospital/Org Admin'),
+        ('ORG_ADMIN', 'Org Admin'),
         ('DONOR', 'Donor'),
     )
     
@@ -67,6 +67,16 @@ class User(AbstractUser):
         ('PENDING', 'Pending Approval'),
         ('APPROVED', 'Approved'),
         ('REJECTED', 'Rejected'),
+    )
+    
+    ORG_TYPE_CHOICES = (
+        ('HOSPITAL', 'Hospital'),
+        ('CLINIC', 'Clinic'),
+        ('SCHOOL', 'School'),
+        ('NGO', 'NGO'),
+        ('CHARITY', 'Charity'),
+        ('GOVERNMENT', 'Government'),
+        ('OTHER', 'Other'),
     )
     
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='DONOR')
@@ -85,7 +95,28 @@ class User(AbstractUser):
         blank=True,
         related_name='admin_requests'
     )
+    requested_organization_name = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Organization name submitted during org admin registration"
+    )
+    requested_organization_type = models.CharField(
+        max_length=50,
+        choices=ORG_TYPE_CHOICES,
+        blank=True,
+        help_text="Organization type submitted during org admin registration"
+    )
     rejection_reason = models.TextField(blank=True, help_text="Reason for rejecting org admin request")
+    approval_requested_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="When the org admin request was submitted")
+    approval_decided_at = models.DateTimeField(null=True, blank=True, help_text="When the approval/rejection decision was made")
+    approval_decided_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admin_decisions',
+        help_text="The admin who approved/rejected this request"
+    )
 
     def save(self, *args, **kwargs):
         """

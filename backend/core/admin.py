@@ -9,7 +9,16 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('role', 'is_staff')
     fieldsets = list(UserAdmin.fieldsets) + [
         ('Custom Fields', {'fields': ('role', 'phone_number')}),
+        ('Organization Admin Registration', {
+            'fields': ('requested_organization', 'requested_organization_name', 'requested_organization_type'),
+            'description': 'Information submitted during organization admin registration'
+        }),
+        ('Approval Workflow', {
+            'fields': ('approval_status', 'rejection_reason', 'approval_requested_at', 'approval_decided_at', 'approval_decided_by'),
+            'description': 'Approval/rejection tracking for organization admin requests'
+        }),
     ]
+    readonly_fields = ('approval_requested_at', 'approval_decided_at', 'approval_decided_by')
 
 
 # 2. Register Organization
