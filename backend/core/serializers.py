@@ -58,7 +58,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'password', 'password2', 'email', 'phone_number']
+        fields = ['username', 'password', 'password2', 'email', 'phone_number', 'first_name', 'last_name']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -70,6 +70,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             username=validated_data['username'],
             email=validated_data.get('email', ''),
             phone_number=validated_data.get('phone_number', ''),
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
             role='DONOR'  # Default role
         )
         user.set_password(validated_data['password'])
@@ -80,24 +82,31 @@ class OrgAdminRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
     organization_name = serializers.CharField(write_only=True, required=True)
+    organization_type = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ['username', 'password', 'password2', 'email', 'phone_number', 'first_name', 'last_name', 'organization_name']
+        fields = ['username', 'password', 'password2', 'email', 'phone_number', 'first_name', 'last_name', 'organization_name', 'organization_type']
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
         
-        # Try to find organization by name, or leave it for admin to assign
+        # Extract organization info (write-only fields)
         org_name = attrs.pop('organization_name')
+        org_type = attrs.pop('organization_type')
+        
+        # Store organization details for later display
+        attrs['requested_organization_name'] = org_name
+        attrs['requested_organization_type'] = org_type
+        
+        # Try to find organization by name
         try:
             organization = Organization.objects.get(name__iexact=org_name)
             attrs['requested_organization'] = organization
         except Organization.DoesNotExist:
             # Store None - admin will assign organization during approval
             attrs['requested_organization'] = None
-            # Save the name somewhere for reference (could add a custom field later)
         
         return attrs
 
@@ -110,7 +119,9 @@ class OrgAdminRegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('last_name', ''),
             role='ORG_ADMIN',
             approval_status='PENDING',  # Pending approval
-            requested_organization=validated_data.get('requested_organization')  # Can be None
+            requested_organization=validated_data.get('requested_organization'),  # Can be None
+            requested_organization_name=validated_data.get('requested_organization_name', ''),
+            requested_organization_type=validated_data.get('requested_organization_type', '')
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -120,21 +131,40 @@ class OrgAdminRegisterSerializer(serializers.ModelSerializer):
 class AdminApprovalSerializer(serializers.ModelSerializer):
     organization_name = serializers.SerializerMethodField()
     organization_type = serializers.SerializerMethodField()
+    approval_decided_by_username = serializers.CharField(source='approval_decided_by.username', read_only=True, allow_null=True)
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 
             'phone_number', 'approval_status', 'requested_organization',
-            'organization_name', 'organization_type', 'rejection_reason'
+            'organization_name', 'organization_type', 'rejection_reason',
+            'approval_requested_at', 'approval_decided_at', 'approval_decided_by',
+            'approval_decided_by_username'
         ]
-        read_only_fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number']
+        read_only_fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number',
+                           'approval_requested_at', 'approval_decided_at', 'approval_decided_by',
+                           'approval_decided_by_username']
     
     def get_organization_name(self, obj):
-        return obj.requested_organization.name if obj.requested_organization else 'Not assigned'
+        # Use the organization name submitted during registration
+        if obj.requested_organization_name:
+            return obj.requested_organization_name
+        # Fallback to organization's name if it exists and is linked
+        if obj.requested_organization:
+            return obj.requested_organization.name
+        # Default to N/A
+        return 'Not assigned'
     
     def get_organization_type(self, obj):
-        return obj.requested_organization.org_type if obj.requested_organization else 'N/A'
+        # Use the organization type submitted during registration
+        if obj.requested_organization_type:
+            return obj.requested_organization_type
+        # Fallback to organization's type if it exists
+        if obj.requested_organization:
+            return obj.requested_organization.org_type
+        # Default to N/A
+        return 'N/A'
 
 class SectionDetailSerializer(serializers.ModelSerializer):
     organization_name = serializers.SerializerMethodField()

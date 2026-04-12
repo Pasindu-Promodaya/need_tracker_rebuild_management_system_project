@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/AuthContext';
-import { getAdminApprovals, approveOrgAdmin, rejectOrgAdmin } from '@/lib/api';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { Check, X } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/AuthContext";
+import {
+  getAdminApprovals,
+  approveOrgAdmin,
+  rejectOrgAdmin,
+  getApprovedOrgAdmins,
+  getRejectedOrgAdmins,
+} from "@/lib/api";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Check, X, ChevronDown, ChevronUp } from "lucide-react";
 
 interface ApprovalRequest {
   id: number;
@@ -13,31 +19,60 @@ interface ApprovalRequest {
   first_name: string;
   last_name: string;
   phone_number: string;
-  approval_status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approval_status: "PENDING" | "APPROVED" | "REJECTED";
   organization_name: string;
   organization_type: string;
   rejection_reason?: string;
+  approval_requested_at?: string;
+  approval_decided_at?: string;
+  approval_decided_by_username?: string;
 }
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<ApprovalRequest[]>([]);
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "approved" | "rejected"
+  >("pending");
+  const [pendingRequests, setPendingRequests] = useState<ApprovalRequest[]>([]);
+  const [approvedRequests, setApprovedRequests] = useState<ApprovalRequest[]>(
+    [],
+  );
+  const [rejectedRequests, setRejectedRequests] = useState<ApprovalRequest[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [rejectingId, setRejectingId] = useState<number | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [expandedCardId, setExpandedCardId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadApprovals();
+    loadAllApprovals();
   }, []);
 
-  const loadApprovals = async () => {
+  const sortByNewest = (requests: ApprovalRequest[]): ApprovalRequest[] => {
+    return [...requests].sort((a, b) => {
+      const dateA = a.approval_decided_at || a.approval_requested_at || "";
+      const dateB = b.approval_decided_at || b.approval_requested_at || "";
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+  };
+
+  const loadAllApprovals = async () => {
     try {
       setLoading(true);
-      const data = await getAdminApprovals();
-      setRequests(data);
+      setError("");
+      const [pending, approved, rejected] = await Promise.all([
+        getAdminApprovals(),
+        getApprovedOrgAdmins(),
+        getRejectedOrgAdmins(),
+      ]);
+      setPendingRequests(sortByNewest(pending));
+      setApprovedRequests(sortByNewest(approved));
+      setRejectedRequests(sortByNewest(rejected));
     } catch (err: any) {
-      setError('Failed to load approval requests');
+      setError("Failed to load approval requests");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -45,35 +80,39 @@ export default function ApprovalsPage() {
 
   const handleApprove = async (id: number) => {
     try {
-      await approveOrgAdmin(id);
-      setRequests(requests.filter(r => r.id !== id));
-      alert('Admin approved successfully!');
+      const result = await approveOrgAdmin(id);
+      setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+      setApprovedRequests([...approvedRequests, result.user]);
+      alert("Admin approved successfully!");
     } catch (err: any) {
-      setError(err.message || 'Failed to approve');
+      setError(err.message || "Failed to approve");
     }
   };
 
   const handleReject = async (id: number) => {
     if (!rejectionReason.trim()) {
-      setError('Please provide a rejection reason');
+      setError("Please provide a rejection reason");
       return;
     }
 
     try {
-      await rejectOrgAdmin(id, rejectionReason);
-      setRequests(requests.filter(r => r.id !== id));
+      const result = await rejectOrgAdmin(id, rejectionReason);
+      setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+      setRejectedRequests([...rejectedRequests, result.user]);
       setRejectingId(null);
-      setRejectionReason('');
-      alert('Request rejected successfully!');
+      setRejectionReason("");
+      alert("Request rejected successfully!");
     } catch (err: any) {
-      setError(err.message || 'Failed to reject');
+      setError(err.message || "Failed to reject");
     }
   };
 
-  if (!user || user.role !== 'ADMIN') {
+  if (!user || user.role !== "ADMIN") {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">Access denied. Only system admins can view this page.</p>
+        <p className="text-red-600">
+          Access denied. Only system admins can view this page.
+        </p>
       </div>
     );
   }
@@ -81,7 +120,9 @@ export default function ApprovalsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Organization Admin Approvals</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+          Organization Admin Approvals
+        </h1>
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
@@ -89,117 +130,335 @@ export default function ApprovalsPage() {
           </div>
         )}
 
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-gray-200">
+          <div className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab("pending")}
+              className={`px-1 py-4 font-medium text-sm border-b-2 transition ${
+                activeTab === "pending"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Pending ({pendingRequests.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("approved")}
+              className={`px-1 py-4 font-medium text-sm border-b-2 transition ${
+                activeTab === "approved"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Approved ({approvedRequests.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("rejected")}
+              className={`px-1 py-4 font-medium text-sm border-b-2 transition ${
+                activeTab === "rejected"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Rejected ({rejectedRequests.length})
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner />
           </div>
-        ) : requests.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg">
-            <p className="text-gray-600">No pending approval requests</p>
-          </div>
         ) : (
-          <div className="space-y-4">
-            {requests.map((req) => (
-              <div
-                key={req.id}
-                className="bg-white rounded-lg shadow p-6"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {req.first_name} {req.last_name}
-                    </h3>
-                    <p className="text-gray-600">{req.email}</p>
-                    <p className="text-sm text-gray-500 mt-1">@{req.username}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    req.approval_status === 'PENDING'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : req.approval_status === 'APPROVED'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {req.approval_status}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Organization</label>
-                    <p className="text-gray-900">{req.organization_name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Type</label>
-                    <p className="text-gray-900">{req.organization_type}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Phone</label>
-                    <p className="text-gray-900">{req.phone_number || 'N/A'}</p>
-                  </div>
-                </div>
-
-                {req.approval_status === 'PENDING' && (
-                  <>
-                    {rejectingId !== req.id ? (
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => handleApprove(req.id)}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-                        >
-                          <Check size={18} />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => setRejectingId(req.id)}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                        >
-                          <X size={18} />
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <textarea
-                          value={rejectionReason}
-                          onChange={(e) => setRejectionReason(e.target.value)}
-                          placeholder="Reason for rejection..."
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500"
-                        />
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => handleReject(req.id)}
-                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                          >
-                            Confirm Rejection
-                          </button>
-                          <button
-                            onClick={() => {
-                              setRejectingId(null);
-                              setRejectionReason('');
-                            }}
-                            className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {req.approval_status === 'REJECTED' && req.rejection_reason && (
-                  <div className="bg-red-50 border border-red-200 p-3 rounded">
-                    <p className="text-sm text-red-800">
-                      <strong>Rejection Reason:</strong> {req.rejection_reason}
+          <>
+            {/* Pending Requests Tab */}
+            {activeTab === "pending" && (
+              <div>
+                {pendingRequests.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg">
+                    <p className="text-gray-600">
+                      No pending approval requests
                     </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingRequests.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        req={req}
+                        isPending={true}
+                        isExpanded={expandedCardId === req.id}
+                        onToggleExpand={() =>
+                          setExpandedCardId(
+                            expandedCardId === req.id ? null : req.id,
+                          )
+                        }
+                        rejectingId={rejectingId}
+                        rejectionReason={rejectionReason}
+                        onApprove={handleApprove}
+                        onRejectStart={() => setRejectingId(req.id)}
+                        onRejectCancel={() => {
+                          setRejectingId(null);
+                          setRejectionReason("");
+                        }}
+                        onRejectSubmit={() => handleReject(req.id)}
+                        onReasonChange={(reason) => setRejectionReason(reason)}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+            )}
+
+            {/* Approved Requests Tab */}
+            {activeTab === "approved" && (
+              <div>
+                {approvedRequests.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg">
+                    <p className="text-gray-600">No approved admin requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {approvedRequests.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        req={req}
+                        isPending={false}
+                        isExpanded={expandedCardId === req.id}
+                        onToggleExpand={() =>
+                          setExpandedCardId(
+                            expandedCardId === req.id ? null : req.id,
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Rejected Requests Tab */}
+            {activeTab === "rejected" && (
+              <div>
+                {rejectedRequests.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg">
+                    <p className="text-gray-600">No rejected admin requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {rejectedRequests.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        req={req}
+                        isPending={false}
+                        showReason={true}
+                        isExpanded={expandedCardId === req.id}
+                        onToggleExpand={() =>
+                          setExpandedCardId(
+                            expandedCardId === req.id ? null : req.id,
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Request Card Component
+interface RequestCardProps {
+  req: ApprovalRequest;
+  isPending: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  rejectingId?: number | null;
+  rejectionReason?: string;
+  onApprove?: (id: number) => void;
+  onRejectStart?: () => void;
+  onRejectCancel?: () => void;
+  onRejectSubmit?: () => void;
+  onReasonChange?: (reason: string) => void;
+  showReason?: boolean;
+}
+
+function RequestCard({
+  req,
+  isPending,
+  isExpanded = true,
+  onToggleExpand,
+  rejectingId,
+  rejectionReason,
+  onApprove,
+  onRejectStart,
+  onRejectCancel,
+  onRejectSubmit,
+  onReasonChange,
+  showReason = false,
+}: RequestCardProps) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {req.first_name} {req.last_name}
+          </h3>
+          <p className="text-gray-600">{req.email}</p>
+          <p className="text-sm text-gray-500 mt-1">@{req.username}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span
+            className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              req.approval_status === "PENDING"
+                ? "bg-yellow-100 text-yellow-800"
+                : req.approval_status === "APPROVED"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+            }`}
+          >
+            {req.approval_status}
+          </span>
+          <button
+            onClick={onToggleExpand}
+            className="text-gray-500 hover:text-gray-700 transition"
+            title={isExpanded ? "Minimize" : "Expand"}
+          >
+            {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && (
+        <>
+          <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
+            <div>
+              <label className="text-sm font-medium text-gray-600">
+                Organization Name
+              </label>
+              <p className="text-gray-900">{req.organization_name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">
+                Organization Type
+              </label>
+              <p className="text-gray-900">{req.organization_type}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Phone</label>
+              <p className="text-gray-900">{req.phone_number || "N/A"}</p>
+            </div>
+            {req.approval_requested_at && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">
+                  Requested On
+                </label>
+                <p className="text-gray-900">
+                  {new Date(req.approval_requested_at).toLocaleDateString(
+                    "en-US",
+                    {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
+                </p>
+              </div>
+            )}
+            {req.approval_decided_at && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">
+                  Decided On
+                </label>
+                <p className="text-gray-900">
+                  {new Date(req.approval_decided_at).toLocaleDateString(
+                    "en-US",
+                    {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
+                </p>
+              </div>
+            )}
+            {req.approval_decided_by_username && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">
+                  Decided By
+                </label>
+                <p className="text-gray-900">
+                  {req.approval_decided_by_username}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {isPending && rejectingId !== req.id ? (
+            <div className="flex gap-3">
+              <button
+                onClick={() => onApprove && onApprove(req.id)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+              >
+                <Check size={18} />
+                Approve
+              </button>
+              <button
+                onClick={() => onRejectStart && onRejectStart()}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+              >
+                <X size={18} />
+                Reject
+              </button>
+            </div>
+          ) : isPending && rejectingId === req.id ? (
+            <div className="space-y-3">
+              <textarea
+                value={rejectionReason}
+                onChange={(e) =>
+                  onReasonChange && onReasonChange(e.target.value)
+                }
+                placeholder="Reason for rejection..."
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => onRejectSubmit && onRejectSubmit()}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                >
+                  Confirm Rejection
+                </button>
+                <button
+                  onClick={() => onRejectCancel && onRejectCancel()}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {showReason &&
+            req.approval_status === "REJECTED" &&
+            req.rejection_reason && (
+              <div className="bg-red-50 border border-red-200 p-3 rounded">
+                <p className="text-sm text-red-800">
+                  <strong>Rejection Reason:</strong> {req.rejection_reason}
+                </p>
+              </div>
+            )}
+        </>
+      )}
     </div>
   );
 }

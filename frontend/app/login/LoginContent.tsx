@@ -1,63 +1,55 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/AuthContext';
-import { getOrganizations, registerOrgAdmin } from '@/lib/api';
-import { Organization } from '@/lib/api';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
+import { registerOrgAdmin } from "@/lib/api";
 
 export default function LoginContent() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'org-admin'>('login');
+  const [activeTab, setActiveTab] = useState<
+    "login" | "register" | "org-admin"
+  >("login");
   const [loading, setLoading] = useState(false);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const { login, register } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   // Common form states
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   // Register specific states
-  const [email, setEmail] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   // Org Admin specific states
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [selectedOrgName, setSelectedOrgName] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [selectedOrgName, setSelectedOrgName] = useState("");
+  const [selectedOrgType, setSelectedOrgType] = useState("");
+
+  // Organization type options
+  const ORG_TYPE_OPTIONS = [
+    { value: "HOSPITAL", label: "Hospital" },
+    { value: "CLINIC", label: "Clinic" },
+    { value: "SCHOOL", label: "School" },
+    { value: "NGO", label: "NGO" },
+    { value: "CHARITY", label: "Charity" },
+    { value: "GOVERNMENT", label: "Government" },
+    { value: "OTHER", label: "Other" },
+  ];
 
   // Password visibility toggles
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    const tab = (searchParams.get('tab') as any) || 'login';
+    const tab = (searchParams.get("tab") as any) || "login";
     setActiveTab(tab);
     setError(null);
-    if (tab === 'org-admin') {
-      loadOrganizations();
-    }
   }, [searchParams]);
-
-  const loadOrganizations = async () => {
-    try {
-      const orgs = await getOrganizations();
-      setOrganizations(orgs);
-    } catch (err) {
-      console.error('Failed to load organizations');
-    }
-  };
-
-  const handleTabChange = (tab: 'login' | 'register' | 'org-admin') => {
-    setActiveTab(tab);
-    setError(null);
-    if (tab === 'org-admin') {
-      loadOrganizations();
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,11 +57,11 @@ export default function LoginContent() {
     setLoading(true);
 
     try {
-      if (activeTab === 'login') {
+      if (activeTab === "login") {
         await login(username, password);
-      } else if (activeTab === 'register') {
+      } else if (activeTab === "register") {
         if (password !== confirmPassword) {
-          throw new Error('Passwords do not match');
+          throw new Error("Passwords do not match");
         }
         await register({
           username,
@@ -77,18 +69,23 @@ export default function LoginContent() {
           password,
           password2: confirmPassword,
           phone_number: phoneNumber,
+          first_name: firstName,
+          last_name: lastName,
         });
-      } else if (activeTab === 'org-admin') {
+      } else if (activeTab === "org-admin") {
         if (password !== confirmPassword) {
-          throw new Error('Passwords do not match');
+          throw new Error("Passwords do not match");
         }
         if (!selectedOrgName.trim()) {
-          throw new Error('Please enter an organization name');
+          throw new Error("Please select an organization");
+        }
+        if (!selectedOrgType.trim()) {
+          throw new Error("Please select an organization type");
         }
         if (!firstName.trim() || !lastName.trim()) {
-          throw new Error('Please enter your first and last name');
+          throw new Error("Please enter your first and last name");
         }
-        
+
         await registerOrgAdmin({
           username,
           email,
@@ -98,23 +95,42 @@ export default function LoginContent() {
           first_name: firstName,
           last_name: lastName,
           organization_name: selectedOrgName,
+          organization_type: selectedOrgType,
         });
-        alert('Registration submitted! Awaiting system administrator approval.');
-        setUsername('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setPhoneNumber('');
-        setFirstName('');
-        setLastName('');
-        setSelectedOrgName('');
-        setActiveTab('login');
+        alert(
+          "Registration submitted! Awaiting system administrator approval.",
+        );
+        setUsername("");
+        setEmail("");
+        setPassword("");
+        setConfirmPassword("");
+        setPhoneNumber("");
+        setFirstName("");
+        setLastName("");
+        setSelectedOrgName("");
+        setSelectedOrgType("");
+        setActiveTab("login");
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTabChange = (tab: "login" | "register" | "org-admin") => {
+    setActiveTab(tab);
+    setError(null);
+    // Reset form fields when switching tabs
+    setUsername("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setPhoneNumber("");
+    setFirstName("");
+    setLastName("");
+    setSelectedOrgName("");
+    setSelectedOrgType("");
   };
 
   return (
@@ -138,14 +154,16 @@ export default function LoginContent() {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          {activeTab === 'login' && 'Welcome back'}
-          {activeTab === 'register' && 'Join as a Donor'}
-          {activeTab === 'org-admin' && 'Register as Organization Admin'}
+          {activeTab === "login" && "Welcome back"}
+          {activeTab === "register" && "Join as a Donor"}
+          {activeTab === "org-admin" && "Register as Organization Admin"}
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          {activeTab === 'login' && 'Sign in to your account'}
-          {activeTab === 'register' && 'Create a donor account to see what needs helping'}
-          {activeTab === 'org-admin' && 'Register your organization and manage its needs'}
+          {activeTab === "login" && "Sign in to your account"}
+          {activeTab === "register" &&
+            "Create a donor account to see what needs helping"}
+          {activeTab === "org-admin" &&
+            "Register your organization and manage its needs"}
         </p>
       </div>
 
@@ -153,19 +171,19 @@ export default function LoginContent() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
           {/* Tab Selector */}
           <div className="flex border-b border-gray-200 mb-6">
-            {(['login', 'register', 'org-admin'] as const).map((tab) => (
+            {(["login", "register", "org-admin"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 className={`flex-1 py-2 px-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-600 hover:text-gray-900"
                 }`}
               >
-                {tab === 'login' && 'Sign In'}
-                {tab === 'register' && 'Donor'}
-                {tab === 'org-admin' && 'Org Admin'}
+                {tab === "login" && "Sign In"}
+                {tab === "register" && "Donor"}
+                {tab === "org-admin" && "Org Admin"}
               </button>
             ))}
           </div>
@@ -200,7 +218,10 @@ export default function LoginContent() {
 
             {/* Username */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Username
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -232,14 +253,21 @@ export default function LoginContent() {
             </div>
 
             {/* Email - for register and org-admin tabs */}
-            {(activeTab === 'register' || activeTab === 'org-admin') && (
+            {(activeTab === "register" || activeTab === "org-admin") && (
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Email Address
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                       <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                     </svg>
@@ -259,14 +287,21 @@ export default function LoginContent() {
             )}
 
             {/* Phone - for register and org-admin tabs */}
-            {(activeTab === 'register' || activeTab === 'org-admin') && (
+            {(activeTab === "register" || activeTab === "org-admin") && (
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Phone Number
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                     </svg>
                   </div>
@@ -285,9 +320,12 @@ export default function LoginContent() {
             )}
 
             {/* First Name - org-admin only */}
-            {activeTab === 'org-admin' && (
+            {(activeTab === "register" || activeTab === "org-admin") && (
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   First Name
                 </label>
                 <input
@@ -304,9 +342,12 @@ export default function LoginContent() {
             )}
 
             {/* Last Name - org-admin only */}
-            {activeTab === 'org-admin' && (
+            {(activeTab === "register" || activeTab === "org-admin") && (
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Last Name
                 </label>
                 <input
@@ -322,39 +363,70 @@ export default function LoginContent() {
               </div>
             )}
 
-            {/* Organization - org-admin only */}
-            {activeTab === 'org-admin' && (
-              <div>
-                <label htmlFor="organization" className="block text-sm font-medium text-gray-700">
-                  Organization
-                </label>
-                <input
-                  id="organization"
-                  name="organization"
-                  type="text"
-                  list="organizations-list"
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Start typing to see available organizations..."
-                  value={selectedOrgName}
-                  onChange={(e) => setSelectedOrgName(e.target.value)}
-                />
-                <datalist id="organizations-list">
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.name} />
-                  ))}
-                </datalist>
-              </div>
+            {/* Organization & Organization Type - org-admin only */}
+            {activeTab === "org-admin" && (
+              <>
+                <div>
+                  <label
+                    htmlFor="organization"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Organization Name
+                  </label>
+                  <input
+                    id="organization"
+                    name="organization"
+                    type="text"
+                    required
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Type the name of your organization"
+                    value={selectedOrgName}
+                    onChange={(e) => setSelectedOrgName(e.target.value)}
+                  />
+                </div>
+
+                {/* Organization Type - independent dropdown */}
+                <div>
+                  <label
+                    htmlFor="orgType"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Organization Type
+                  </label>
+                  <select
+                    id="orgType"
+                    name="orgType"
+                    required
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    value={selectedOrgType}
+                    onChange={(e) => setSelectedOrgType(e.target.value)}
+                  >
+                    <option value="">-- Select organization type --</option>
+                    {ORG_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Password
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
                     <path
                       fillRule="evenodd"
                       d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
@@ -365,7 +437,7 @@ export default function LoginContent() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   required
                   className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 border"
                   placeholder="••••••••"
@@ -379,7 +451,11 @@ export default function LoginContent() {
                   tabIndex={-1}
                 >
                   {showPassword ? (
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                       <path
                         fillRule="evenodd"
@@ -388,7 +464,11 @@ export default function LoginContent() {
                       />
                     </svg>
                   ) : (
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
@@ -402,14 +482,21 @@ export default function LoginContent() {
             </div>
 
             {/* Confirm Password - for register and org-admin tabs */}
-            {(activeTab === 'register' || activeTab === 'org-admin') && (
+            {(activeTab === "register" || activeTab === "org-admin") && (
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Confirm Password
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
                       <path
                         fillRule="evenodd"
                         d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
@@ -420,7 +507,7 @@ export default function LoginContent() {
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? "text" : "password"}
                     required
                     className="block w-full pl-10 pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 p-2 border"
                     placeholder="••••••••"
@@ -434,7 +521,11 @@ export default function LoginContent() {
                     tabIndex={-1}
                   >
                     {showConfirmPassword ? (
-                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <svg
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
                         <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                         <path
                           fillRule="evenodd"
@@ -443,7 +534,11 @@ export default function LoginContent() {
                         />
                       </svg>
                     ) : (
-                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <svg
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
                         <path
                           fillRule="evenodd"
                           d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
@@ -458,7 +553,7 @@ export default function LoginContent() {
             )}
 
             {/* Remember me - login tab only */}
-            {activeTab === 'login' && (
+            {activeTab === "login" && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
@@ -467,7 +562,10 @@ export default function LoginContent() {
                     type="checkbox"
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-900"
+                  >
                     Remember me
                   </label>
                 </div>
@@ -490,7 +588,11 @@ export default function LoginContent() {
                 disabled={loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Processing...' : (activeTab === 'login' ? 'Sign In' : 'Register')}
+                {loading
+                  ? "Processing..."
+                  : activeTab === "login"
+                    ? "Sign In"
+                    : "Register"}
               </button>
             </div>
           </form>

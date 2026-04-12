@@ -177,27 +177,34 @@ def forgot_password(request):
         return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        user = User.objects.get(email=email)
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
+        user = User.objects.filter(email=email).first()
+        if user:
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
 
-        send_mail(
-            subject="Password Reset Request – NeedTracker",
-            message=(
-                f"Hi {user.username},\n\n"
-                f"We received a request to reset your password.\n\n"
-                f"Click the link below to set a new password (valid for 1 hour):\n{reset_link}\n\n"
-                f"If you did not request this, you can safely ignore this email.\n\n"
-                f"— The NeedTracker Team"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-    except User.DoesNotExist:
-        pass  # Don't reveal whether the email exists
+            try:
+                send_mail(
+                    subject="Password Reset Request – NeedTracker",
+                    message=(
+                        f"Hi {user.username},\n\n"
+                        f"We received a request to reset your password.\n\n"
+                        f"Click the link below to set a new password (valid for 1 hour):\n{reset_link}\n\n"
+                        f"If you did not request this, you can safely ignore this email.\n\n"
+                        f"— The NeedTracker Team"
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                # Log email sending errors to investigate without revealing to the client
+                print(f"Failed to send email to {email}: {str(e)}")
+                pass
+    except Exception as e:
+        print(f"Error finding user {email}: {str(e)}")
+        pass  # Don't reveal any other errors
 
     # Always return success to prevent email enumeration
     return Response(
@@ -496,8 +503,11 @@ class AdminApprovalViewSet(viewsets.ViewSet):
             )
         
         # Approve the user and assign them to the organization
+        from django.utils import timezone
         user.approval_status = 'APPROVED'
         user.rejection_reason = ''
+        user.approval_decided_at = timezone.now()
+        user.approval_decided_by = request.user
         user.save()
         
         # Link the organization to this admin (if organization exists)
@@ -533,8 +543,11 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         
         reason = request.data.get('reason', 'No reason provided')
         
+        from django.utils import timezone
         user.approval_status = 'REJECTED'
         user.rejection_reason = reason
+        user.approval_decided_at = timezone.now()
+        user.approval_decided_by = request.user
         user.save()
         
         return Response({
