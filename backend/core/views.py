@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 from .serializers import (
@@ -120,26 +121,33 @@ class OrgAdminRegisterView(generics.CreateAPIView):
 def custom_login(request):
     """
     Custom login endpoint that checks if user is approved.
+    Allows login with either username or email.
     Only approved users can login (approval_status = 'APPROVED')
     """
     from rest_framework_simplejwt.views import TokenObtainPairView
+    from django.db.models import Q
     
     username = request.data.get('username')
     password = request.data.get('password')
     
     if not username or not password:
         return Response(
-            {'error': 'Username and password are required'},
+            {'error': 'Username/Email and password are required'},
             status=status.HTTP_400_BAD_REQUEST
         )
     
     try:
-        user = User.objects.get(username=username)
+        # Allow login by either username or email
+        user = User.objects.get(Q(username=username) | Q(email=username))
     except User.DoesNotExist:
         return Response(
             {'error': 'Invalid credentials'},
             status=status.HTTP_401_UNAUTHORIZED
         )
+    except User.MultipleObjectsReturned:
+        # If multiple users have the same username, fallback to checking email
+        # This shouldn't typically happen if email is unique, but handles legacy cases
+        user = User.objects.filter(Q(username=username) | Q(email=username)).first()
     
     # Check if user is approved
     if user.role == 'ORG_ADMIN':
@@ -519,6 +527,48 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         else:
             org_name = 'Not assigned'
         
+        # Send approval email
+        try:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            login_url = f"{frontend_url}/login"
+            
+            email_subject = "Your ORG_ADMIN Registration Request Has Been Approved – NeedTracker"
+            email_message = (
+                f"Dear {user.first_name or user.username},\n\n"
+                f"Great news! Your request to register as an Organization Administrator has been approved by the NeedTracker System Administrator.\n\n"
+                f"--- APPROVAL DETAILS ---\n"
+                f"Username: {user.username}\n"
+                f"Email: {user.email}\n"
+                f"Organization Name: {user.requested_organization_name or 'Not specified'}\n"
+                f"Organization Type: {user.requested_organization_type or 'Not specified'}\n"
+                f"Approval Date: {user.approval_decided_at.strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
+                f"Approved By: System Admin\n\n"
+                f"--- NEXT STEPS ---\n"
+                f"1. Log in to your NeedTracker account using your credentials\n"
+                f"2. Navigate to the Organizations section to manage your organization's needs\n"
+                f"3. You can now create sections, add needs, and manage your organization's dashboard\n\n"
+                f"Login URL: {login_url}\n\n"
+                f"--- ACCOUNT INFORMATION ---\n"
+                f"Your account is now fully active and ready to use. You have access to:\n"
+                f"• Organization management and configuration\n"
+                f"• Need creation and management\n"
+                f"• Document uploads and AI processing\n"
+                f"• Organization dashboard and statistics\n\n"
+                f"If you have any questions or encounter any issues, please contact our support team.\n\n"
+                f"Welcome to NeedTracker!\n"
+                f"— The NeedTracker Team"
+            )
+            
+            send_mail(
+                subject=email_subject,
+                message=email_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send approval email to {user.email}: {str(e)}")
+        
         return Response({
             'message': f'Org admin {user.username} approved and assigned to {org_name}',
             'user': AdminApprovalSerializer(user).data
@@ -526,7 +576,7 @@ class AdminApprovalViewSet(viewsets.ViewSet):
     
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
-        """Reject an org admin registration request"""
+        """Reject an org admin registration request and delete the user account"""
         try:
             user = User.objects.get(id=pk, role='ORG_ADMIN')
         except User.DoesNotExist:
@@ -543,16 +593,58 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         
         reason = request.data.get('reason', 'No reason provided')
         
-        from django.utils import timezone
-        user.approval_status = 'REJECTED'
-        user.rejection_reason = reason
-        user.approval_decided_at = timezone.now()
-        user.approval_decided_by = request.user
-        user.save()
+        # Store user info for email before deletion
+        user_email = user.email
+        user_username = user.username
+        user_first_name = user.first_name or user.username
+        user_org_name = user.requested_organization_name or 'Not specified'
+        user_org_type = user.requested_organization_type or 'Not specified'
+        
+        # Send rejection email BEFORE deleting the account
+        try:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            
+            email_subject = "Your ORG_ADMIN Registration Request Has Been Rejected – NeedTracker"
+            email_message = (
+                f"Dear {user_first_name},\n\n"
+                f"We regret to inform you that your request to register as an Organization Administrator on the NeedTracker platform has been reviewed and rejected by the System Administrator.\n\n"
+                f"--- REJECTION DETAILS ---\n"
+                f"Username: {user_username}\n"
+                f"Email: {user_email}\n"
+                f"Organization Requested: {user_org_name}\n"
+                f"Organization Type: {user_org_type}\n"
+                f"Rejection Date: {timezone.now().strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
+                f"Rejected By: System Admin\n\n"
+                f"--- REJECTION REASON ---\n"
+                f"{reason}\n\n"
+                f"--- WHAT HAPPENS NEXT ---\n"
+                f"You can re-register with the same email address after addressing the rejection reason. \n"
+                f"Your previous account has been removed from the system.\n"
+                f"Please contact the System Administrator if you would like to appeal this decision.\n\n"
+                f"--- CONTACT INFORMATION ---\n"
+                f"If you have any questions or would like to appeal this decision, please reach out to the NeedTracker support team.\n"
+                f"Platform: {frontend_url}\n\n"
+                f"We appreciate your interest in joining the NeedTracker platform.\n"
+                f"— The NeedTracker Team"
+            )
+            
+            send_mail(
+                subject=email_subject,
+                message=email_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send rejection email to {user_email}: {str(e)}")
+        
+        # DELETE the user account so they can register again
+        user.delete()
         
         return Response({
-            'message': f'Org admin {user.username} rejected',
-            'user': AdminApprovalSerializer(user).data
+            'message': f'Org admin registration request rejected and user account deleted. User can now re-register.',
+            'deleted_email': user_email,
+            'rejection_reason': reason
         }, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get'])

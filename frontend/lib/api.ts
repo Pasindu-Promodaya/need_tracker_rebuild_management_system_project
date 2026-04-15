@@ -202,22 +202,14 @@ export async function registerOrgAdmin(data: {
 }
 
 export async function getAdminApprovals(): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>("/admin/approvals/", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 export async function approveOrgAdmin(userId: number): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>(`/admin/approvals/${userId}/approve/`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
@@ -225,33 +217,21 @@ export async function rejectOrgAdmin(
   userId: number,
   reason: string,
 ): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>(`/admin/approvals/${userId}/reject/`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ reason }),
   });
 }
 
 export async function getApprovedOrgAdmins(): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>("/admin/approvals/approved_list/", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 export async function getRejectedOrgAdmins(): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>("/admin/approvals/rejected_list/", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
