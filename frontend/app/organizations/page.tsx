@@ -14,6 +14,7 @@ import {
 } from "@/lib/api";
 import { PageLoading } from "@/components/LoadingSpinner";
 import { useAdminGuard } from "@/lib/useAuthGuard";
+import { useAuth } from "@/lib/AuthContext";
 import SectionAccordion from "@/components/SectionAccordion";
 import AddSectionModal from "@/components/AddSectionModal";
 import ManualNeedEntryForm from "@/components/ManualNeedEntryForm";
@@ -23,8 +24,11 @@ import EditSectionModal from "@/components/EditSectionModal";
 export default function OrganizationsPage() {
   const router = useRouter();
   const { authorized, isLoading: authLoading } = useAdminGuard();
+  const { user } = useAuth();
   const isAdmin = authorized;
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -40,20 +44,37 @@ export default function OrganizationsPage() {
   const [deletingNeed, setDeletingNeed] = useState(false);
   const [editSection, setEditSection] = useState<Section | null>(null);
 
-  const fetchOrganization = useCallback(async () => {
+  const fetchOrganizations = useCallback(async () => {
     try {
       const orgs = await getOrganizations();
-      setOrganization(orgs.length > 0 ? orgs[0] : null);
+      setOrganizations(orgs);
+
+      // If ADMIN, show all organizations; if ORG_ADMIN, show only their organization
+      if (user?.role === "ADMIN") {
+        // ADMIN sees all organizations
+        if (orgs.length > 0) {
+          const firstOrgId = orgs[0].id;
+          setSelectedOrgId(firstOrgId);
+          setOrganization(orgs[0]);
+        }
+      } else if (user?.role === "ORG_ADMIN") {
+        // ORG_ADMIN sees only their organization
+        if (orgs.length > 0) {
+          setOrganization(orgs[0]);
+          setSelectedOrgId(orgs[0].id);
+        }
+      }
     } catch (err) {
+      setOrganizations([]);
       setOrganization(null);
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     if (!authorized) return;
-    fetchOrganization();
+    fetchOrganizations();
     setLoading(false);
-  }, [authorized, fetchOrganization]);
+  }, [authorized, fetchOrganizations]);
 
   const findNeedById = (needId: number): NeedItem | null => {
     if (!organization?.sections) return null;
@@ -70,7 +91,7 @@ export default function OrganizationsPage() {
       await deleteNeed(needId);
       setDeleteNeedConfirm(null);
       setLoading(true);
-      await fetchOrganization();
+      await fetchOrganizations();
       setLoading(false);
     } catch {
       alert("Failed to delete need. Please try again.");
@@ -83,12 +104,18 @@ export default function OrganizationsPage() {
     try {
       await deleteSection(sectionId);
       setLoading(true);
-      await fetchOrganization();
+      await fetchOrganizations();
       setLoading(false);
     } catch {
       alert("Failed to delete section. Please try again.");
     }
   }
+
+  const handleSwitchOrganization = (orgId: number) => {
+    setSelectedOrgId(orgId);
+    const selected = organizations.find((o) => o.id === orgId);
+    setOrganization(selected || null);
+  };
 
   const handleDelete = async () => {
     if (!organization) return;
@@ -110,17 +137,45 @@ export default function OrganizationsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Organization</h1>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold text-gray-900">
+            {user?.role === "ADMIN" ? "Organizations" : "Organization"}
+          </h1>
           <p className="text-gray-500 mt-1">
-            {organization
-              ? "Manage your registered organization"
-              : "No organization registered yet"}
+            {user?.role === "ADMIN"
+              ? `View all organizations (Total: ${organizations.length})`
+              : "View and manage the organization"}
           </p>
+
+          {/* Organization Selector for ADMIN */}
+          {user?.role === "ADMIN" && organizations.length > 1 && (
+            <div className="mt-4 max-w-xs">
+              <label
+                htmlFor="org-selector"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Select Organization:
+              </label>
+              <select
+                id="org-selector"
+                value={selectedOrgId || ""}
+                onChange={(e) =>
+                  handleSwitchOrganization(Number(e.target.value))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
-        {organization && (
+        {organization && user?.role === "ORG_ADMIN" && (
           <div className="flex items-center gap-3">
             <Link
               href={`/organizations/${organization.id}/edit`}
@@ -331,7 +386,7 @@ export default function OrganizationsPage() {
               <h2 className="text-xl font-bold text-gray-900">
                 Sections & Needs
               </h2>
-              {isAdmin && (
+              {user?.role === "ORG_ADMIN" && (
                 <button
                   onClick={() => setShowAddSection(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
@@ -362,7 +417,7 @@ export default function OrganizationsPage() {
                     section={section}
                     defaultOpen={index === 0}
                     onAddNeed={
-                      isAdmin
+                      user?.role === "ORG_ADMIN"
                         ? () =>
                             setAddNeedForSection({
                               orgId: organization.id,
@@ -371,7 +426,7 @@ export default function OrganizationsPage() {
                         : undefined
                     }
                     onEditNeed={
-                      isAdmin
+                      user?.role === "ORG_ADMIN"
                         ? (needId) => {
                             const n = findNeedById(needId);
                             if (n) setEditNeed(n);
@@ -379,7 +434,7 @@ export default function OrganizationsPage() {
                         : undefined
                     }
                     onDeleteNeed={
-                      isAdmin
+                      user?.role === "ORG_ADMIN"
                         ? (needId) => {
                             const n = findNeedById(needId);
                             if (n) setDeleteNeedConfirm(n);
@@ -387,10 +442,12 @@ export default function OrganizationsPage() {
                         : undefined
                     }
                     onEditSection={
-                      isAdmin ? () => setEditSection(section) : undefined
+                      user?.role === "ORG_ADMIN"
+                        ? () => setEditSection(section)
+                        : undefined
                     }
                     onDeleteSection={
-                      isAdmin
+                      user?.role === "ORG_ADMIN"
                         ? () => handleDeleteSection(section.id)
                         : undefined
                     }
@@ -419,7 +476,7 @@ export default function OrganizationsPage() {
             )}
           </div>
         </div>
-      ) : (
+      ) : user?.role === "ORG_ADMIN" ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-16 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
             <svg
@@ -462,6 +519,30 @@ export default function OrganizationsPage() {
             Add Organization
           </Link>
         </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-16 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Organizations
+          </h3>
+          <p className="text-gray-500">
+            Viewing all organizations in the system.
+          </p>
+        </div>
       )}
 
       {/* Add Section Modal */}
@@ -472,7 +553,7 @@ export default function OrganizationsPage() {
           onSuccess={() => {
             setShowAddSection(false);
             setLoading(true);
-            fetchOrganization();
+            fetchOrganizations();
           }}
         />
       )}
@@ -486,7 +567,7 @@ export default function OrganizationsPage() {
           onSuccess={() => {
             setAddNeedForSection(null);
             setLoading(true);
-            fetchOrganization();
+            fetchOrganizations();
           }}
         />
       )}
@@ -499,7 +580,7 @@ export default function OrganizationsPage() {
           onSuccess={() => {
             setEditNeed(null);
             setLoading(true);
-            fetchOrganization();
+            fetchOrganizations();
           }}
         />
       )}
@@ -548,7 +629,7 @@ export default function OrganizationsPage() {
           onSuccess={() => {
             setEditSection(null);
             setLoading(true);
-            fetchOrganization();
+            fetchOrganizations();
           }}
         />
       )}

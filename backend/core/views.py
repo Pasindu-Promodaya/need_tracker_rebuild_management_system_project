@@ -11,6 +11,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.utils import timezone
+from django.utils.timezone import localtime
 from django.core.mail import send_mail
 from django.conf import settings
 from .serializers import (
@@ -532,6 +533,9 @@ class AdminApprovalViewSet(viewsets.ViewSet):
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
             login_url = f"{frontend_url}/login"
             
+            # Localize to Asia/Colombo timezone
+            approval_time = localtime(user.approval_decided_at)
+            
             email_subject = "Your ORG_ADMIN Registration Request Has Been Approved – NeedTracker"
             email_message = (
                 f"Dear {user.first_name or user.username},\n\n"
@@ -541,7 +545,7 @@ class AdminApprovalViewSet(viewsets.ViewSet):
                 f"Email: {user.email}\n"
                 f"Organization Name: {user.requested_organization_name or 'Not specified'}\n"
                 f"Organization Type: {user.requested_organization_type or 'Not specified'}\n"
-                f"Approval Date: {user.approval_decided_at.strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
+                f"Approval Date: {approval_time.strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
                 f"Approved By: System Admin\n\n"
                 f"--- NEXT STEPS ---\n"
                 f"1. Log in to your NeedTracker account using your credentials\n"
@@ -604,6 +608,9 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         try:
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
             
+            # Localize to Asia/Colombo timezone
+            rejection_time = localtime(timezone.now())
+            
             email_subject = "Your ORG_ADMIN Registration Request Has Been Rejected – NeedTracker"
             email_message = (
                 f"Dear {user_first_name},\n\n"
@@ -613,7 +620,7 @@ class AdminApprovalViewSet(viewsets.ViewSet):
                 f"Email: {user_email}\n"
                 f"Organization Requested: {user_org_name}\n"
                 f"Organization Type: {user_org_type}\n"
-                f"Rejection Date: {timezone.now().strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
+                f"Rejection Date: {rejection_time.strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
                 f"Rejected By: System Admin\n\n"
                 f"--- REJECTION REASON ---\n"
                 f"{reason}\n\n"

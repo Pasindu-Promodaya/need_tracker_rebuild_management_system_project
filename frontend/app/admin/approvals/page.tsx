@@ -194,11 +194,14 @@ export default function ApprovalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900">
           Organization Admin Approvals
         </h1>
+        <p className="text-gray-500 mt-1 mb-3">
+          Review and approve organization admins
+        </p>
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
