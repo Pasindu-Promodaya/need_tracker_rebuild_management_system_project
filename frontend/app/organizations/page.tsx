@@ -43,6 +43,13 @@ export default function OrganizationsPage() {
   );
   const [deletingNeed, setDeletingNeed] = useState(false);
   const [editSection, setEditSection] = useState<Section | null>(null);
+  const [isOrgExpanded, setIsOrgExpanded] = useState(true);
+  const [deleteSectionConfirm, setDeleteSectionConfirm] =
+    useState<Section | null>(null);
+  const [deletingSection, setDeletingSection] = useState(false);
+  const [editSectionConfirm, setEditSectionConfirm] = useState<Section | null>(
+    null,
+  );
 
   const fetchOrganizations = useCallback(async () => {
     try {
@@ -101,14 +108,31 @@ export default function OrganizationsPage() {
   }
 
   async function handleDeleteSection(sectionId: number) {
+    const section = organization?.sections?.find((s) => s.id === sectionId);
+    if (section) {
+      setDeleteSectionConfirm(section);
+    }
+  }
+
+  async function confirmDeleteSection() {
+    if (!deleteSectionConfirm) return;
+    setDeletingSection(true);
     try {
-      await deleteSection(sectionId);
+      await deleteSection(deleteSectionConfirm.id);
+      setDeleteSectionConfirm(null);
       setLoading(true);
       await fetchOrganizations();
       setLoading(false);
     } catch {
       alert("Failed to delete section. Please try again.");
+      setDeletingSection(false);
     }
+  }
+
+  async function confirmEditSection() {
+    if (!editSectionConfirm) return;
+    setEditSection(editSectionConfirm);
+    setEditSectionConfirm(null);
   }
 
   const handleSwitchOrganization = (orgId: number) => {
@@ -223,162 +247,191 @@ export default function OrganizationsPage() {
       {organization ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 transition-all">
           {/* Header with Icon and Basic Info */}
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg
-                className="w-7 h-7 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div className="flex items-start gap-4 mb-6 justify-between">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-7 h-7 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  {organization.name}
+                </h2>
+                <div className="flex flex-wrap gap-3">
+                  {organization.org_type && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
+                      {organization.org_type}
+                    </span>
+                  )}
+                  {organization.established_year && (
+                    <span className="text-sm text-gray-500">
+                      Est: {organization.established_year}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            {user?.role === "ADMIN" && (
+              <button
+                onClick={() => setIsOrgExpanded(!isOrgExpanded)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                title={isOrgExpanded ? "Minimize" : "Expand"}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {organization.name}
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                {organization.org_type && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
-                    {organization.org_type}
-                  </span>
+                <svg
+                  className={`w-5 h-5 text-gray-600 transition-transform ${
+                    isOrgExpanded ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Core Information Grid - Collapsible */}
+          {isOrgExpanded && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 pb-6 border-b border-gray-100">
+                {/* Registration & Location */}
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Registration
+                  </h3>
+                  <p className="text-gray-900 font-medium">
+                    {organization.registration_number}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    District
+                  </h3>
+                  <p className="text-gray-900 font-medium">
+                    {organization.district}
+                  </p>
+                </div>
+
+                {/* Address */}
+                {organization.address && (
+                  <div className="md:col-span-2">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Address
+                    </h3>
+                    <p className="text-gray-900">{organization.address}</p>
+                  </div>
                 )}
-                {organization.established_year && (
-                  <span className="text-sm text-gray-500">
-                    Est: {organization.established_year}
-                  </span>
+              </div>
+
+              {/* Contact Information Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-100">
+                {organization.phone && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Phone
+                    </h3>
+                    <a
+                      href={`tel:${organization.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      {organization.phone}
+                    </a>
+                  </div>
+                )}
+                {organization.email_contact && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Email
+                    </h3>
+                    <a
+                      href={`mailto:${organization.email_contact}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      {organization.email_contact}
+                    </a>
+                  </div>
+                )}
+                {organization.website && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      Website
+                    </h3>
+                    <a
+                      href={organization.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-blue-600 hover:text-blue-700 font-medium truncate"
+                    >
+                      {organization.website}
+                    </a>
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
 
-          {/* Core Information Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 pb-6 border-b border-gray-100">
-            {/* Registration & Location */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Registration
-              </h3>
-              <p className="text-gray-900 font-medium">
-                {organization.registration_number}
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                District
-              </h3>
-              <p className="text-gray-900 font-medium">
-                {organization.district}
-              </p>
-            </div>
+              {/* Description */}
+              {organization.description && (
+                <div className="mb-6 pb-6 border-b border-gray-100">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    About
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed text-sm">
+                    {organization.description}
+                  </p>
+                </div>
+              )}
 
-            {/* Address */}
-            {organization.address && (
-              <div className="md:col-span-2">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Address
-                </h3>
-                <p className="text-gray-900">{organization.address}</p>
+              {/* Statistics */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {organization.sections?.length || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">Sections</p>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {organization.sections?.reduce(
+                      (a, s) => a + (s.needs?.length || 0),
+                      0,
+                    ) || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">Total Needs</p>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600">
+                    {organization.sections?.reduce(
+                      (a, s) =>
+                        a +
+                        (s.needs?.filter((n) => n.priority === "CRITICAL")
+                          .length || 0),
+                      0,
+                    ) || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">Critical</p>
+                </div>
               </div>
-            )}
-          </div>
-
-          {/* Contact Information Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-100">
-            {organization.phone && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Phone
-                </h3>
-                <a
-                  href={`tel:${organization.phone}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  {organization.phone}
-                </a>
-              </div>
-            )}
-            {organization.email_contact && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Email
-                </h3>
-                <a
-                  href={`mailto:${organization.email_contact}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  {organization.email_contact}
-                </a>
-              </div>
-            )}
-            {organization.website && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Website
-                </h3>
-                <a
-                  href={organization.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-blue-600 hover:text-blue-700 font-medium truncate"
-                >
-                  {organization.website}
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          {organization.description && (
-            <div className="mb-6 pb-6 border-b border-gray-100">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                About
-              </h3>
-              <p className="text-gray-700 leading-relaxed text-sm">
-                {organization.description}
-              </p>
-            </div>
+            </>
           )}
-
-          {/* Statistics */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-gray-900">
-                {organization.sections?.length || 0}
-              </p>
-              <p className="text-xs text-gray-500">Sections</p>
-            </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-gray-900">
-                {organization.sections?.reduce(
-                  (a, s) => a + (s.needs?.length || 0),
-                  0,
-                ) || 0}
-              </p>
-              <p className="text-xs text-gray-500">Total Needs</p>
-            </div>
-            <div className="text-center p-3 bg-red-50 rounded-lg">
-              <p className="text-2xl font-bold text-red-600">
-                {organization.sections?.reduce(
-                  (a, s) =>
-                    a +
-                    (s.needs?.filter((n) => n.priority === "CRITICAL").length ||
-                      0),
-                  0,
-                ) || 0}
-              </p>
-              <p className="text-xs text-gray-500">Critical</p>
-            </div>
-          </div>
 
           {/* Sections & Needs */}
           <div className="mt-8 pt-8 border-t border-gray-100">
@@ -443,12 +496,14 @@ export default function OrganizationsPage() {
                     }
                     onEditSection={
                       user?.role === "ORG_ADMIN"
-                        ? () => setEditSection(section)
+                        ? () => setEditSectionConfirm(section)
                         : undefined
                     }
                     onDeleteSection={
                       user?.role === "ORG_ADMIN"
-                        ? () => handleDeleteSection(section.id)
+                        ? async () => {
+                            setDeleteSectionConfirm(section);
+                          }
                         : undefined
                     }
                   />
@@ -472,6 +527,11 @@ export default function OrganizationsPage() {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   No Sections Yet
                 </h3>
+                {(user?.role === "ADMIN" || user?.role === "ORG_ADMIN") && (
+                  <p className="text-gray-500">
+                    No sections have been added to this organization yet
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -540,7 +600,7 @@ export default function OrganizationsPage() {
             Organizations
           </h3>
           <p className="text-gray-500">
-            Viewing all organizations in the system.
+            View all organizations in the system.
           </p>
         </div>
       )}
@@ -686,6 +746,122 @@ export default function OrganizationsPage() {
                   className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                 >
                   {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Section Confirmation Modal */}
+      {deleteSectionConfirm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/30"
+              onClick={() => setDeleteSectionConfirm(null)}
+            />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Delete Section
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete{" "}
+                <strong>{deleteSectionConfirm.name}</strong>? All needs in this
+                section will be permanently removed.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setDeleteSectionConfirm(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteSection}
+                  disabled={deletingSection}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {deletingSection ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Section Confirmation Modal */}
+      {editSectionConfirm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="fixed inset-0 bg-black/30"
+              onClick={() => setEditSectionConfirm(null)}
+            />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Edit Section
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Modify section details
+                  </p>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-6">
+                Edit the section <strong>{editSectionConfirm.name}</strong>? You
+                will be able to update the section name and other details.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setEditSectionConfirm(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmEditSection}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Edit
                 </button>
               </div>
             </div>

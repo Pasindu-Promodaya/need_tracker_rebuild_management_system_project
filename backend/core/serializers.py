@@ -217,17 +217,23 @@ class AdminApprovalSerializer(serializers.ModelSerializer):
 
 class SectionDetailSerializer(serializers.ModelSerializer):
     organization_name = serializers.SerializerMethodField()
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
+    created_by_role = serializers.CharField(source='created_by.role', read_only=True, allow_null=True)
     
     def get_organization_name(self, obj):
         return obj.organization.name if obj.organization else None
     
     class Meta:
         model = Section
-        fields = ['id', 'name', 'organization', 'organization_name']
+        fields = ['id', 'name', 'organization', 'organization_name', 'created_by', 'created_by_username', 'created_by_role']
 
 # 2.5 Need Item Serializer with section detail
 class NeedItemSerializer(serializers.ModelSerializer):
     section_detail = SectionDetailSerializer(source='section', read_only=True)
+    quantity_received = serializers.IntegerField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    name = serializers.CharField(required=True, max_length=200)
     
     class Meta:
         model = NeedItem
@@ -240,10 +246,12 @@ class NeedItemSerializer(serializers.ModelSerializer):
 # 3. Section Serializer (Includes the needs inside it)
 class SectionSerializer(serializers.ModelSerializer):
     needs = NeedItemSerializer(many=True, read_only=True)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
+    created_by_role = serializers.CharField(source='created_by.role', read_only=True, allow_null=True)
 
     class Meta:
         model = Section
-        fields = ['id', 'organization', 'name', 'head_of_section', 'needs']
+        fields = ['id', 'organization', 'name', 'head_of_section', 'needs', 'created_by', 'created_by_username', 'created_by_role']
 
 # 4. Organization Serializer (Includes sections inside it)
 class OrganizationSerializer(serializers.ModelSerializer):

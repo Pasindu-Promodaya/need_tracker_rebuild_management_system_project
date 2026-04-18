@@ -172,6 +172,7 @@ class Section(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="sections")
     name = models.CharField(max_length=100) # e.g., "OPD", "Kitchen", "Maternity Ward"
     head_of_section = models.CharField(max_length=100, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_sections", help_text="User who created this section")
 
     def __str__(self):
         return f"{self.organization.name} - {self.name}"

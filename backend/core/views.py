@@ -26,6 +26,7 @@ from .serializers import (
     UserSerializer,
     UpdateProfileSerializer
 )
+from .serializers_jwt import get_tokens_for_user
 
 User = get_user_model()
 
@@ -37,7 +38,11 @@ class IsAdminOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if request.method in ('GET', 'HEAD', 'OPTIONS'):
             return True
-        return request.user and request.user.is_authenticated and request.user.role in ('ADMIN', 'ORG_ADMIN')
+        # Debug logging
+        if not request.user or not request.user.is_authenticated:
+            print(f"[DEBUG] Unauthenticated {request.method} request to {request.path}")
+            print(f"[DEBUG] User: {request.user}, Authenticated: {request.user.is_authenticated if request.user else 'No user'}")
+        return request.user and request.user.is_authenticated and hasattr(request.user, 'role') and request.user.role in ('ADMIN', 'ORG_ADMIN')
 
 
 class IsAdminUser(BasePermission):
@@ -71,14 +76,10 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        # Generate tokens
-        refresh = RefreshToken.for_user(user)
+        # Generate tokens with custom claims
+        token_data = get_tokens_for_user(user)
         
-        return Response({
-            "user": UserSerializer(user).data,
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        }, status=status.HTTP_201_CREATED)
+        return Response(token_data, status=status.HTTP_201_CREATED)
 
 class MeView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
@@ -169,14 +170,10 @@ def custom_login(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
     
-    # Generate tokens
-    refresh = RefreshToken.for_user(user)
+    # Generate tokens with custom claims
+    token_data = get_tokens_for_user(user)
     
-    return Response({
-        "user": UserSerializer(user).data,
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-    }, status=status.HTTP_200_OK)
+    return Response(token_data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -257,13 +254,42 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     serializer_class = OrganizationSerializer
     permission_classes = [IsAdminOrReadOnly]
 
+    def get_queryset(self):
+        """Filter organizations based on user role"""
+        queryset = Organization.objects.all()
+        user = self.request.user
+        
+        # Handle unauthenticated users
+        if not user.is_authenticated:
+            return queryset  # Return all for public viewing
+        
+        # ADMIN users see all organizations
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            return queryset
+        
+        # ORG_ADMIN users only see their own organization
+        if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
+            return queryset.filter(admin_user=user)
+        
+        # DONOR users see all organizations (for viewing/donating)
+        return queryset
+
     def create(self, request, *args, **kwargs):
-        if Organization.objects.exists():
-            return Response(
-                {"detail": "Only one organization is allowed in this system. An organization already exists."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # ORG_ADMIN users can only create one organization
+        if (hasattr(request.user, 'role') and request.user.role == 'ORG_ADMIN'):
+            if Organization.objects.filter(admin_user=request.user).exists():
+                return Response(
+                    {"detail": "You can only create one organization. You already have an organization."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        """Set the admin_user to the current user if they're an ORG_ADMIN"""
+        if hasattr(self.request.user, 'role') and self.request.user.role == 'ORG_ADMIN':
+            serializer.save(admin_user=self.request.user)
+        else:
+            serializer.save()
 
     # Custom action to get hierarchy (Org -> Sections -> Needs)
     @action(detail=True, methods=['get'])
@@ -279,6 +305,30 @@ class SectionViewSet(viewsets.ModelViewSet):
     serializer_class = SectionSerializer
     permission_classes = [IsAdminOrReadOnly]
 
+    def get_queryset(self):
+        """Filter sections based on user role and organization ownership"""
+        queryset = Section.objects.select_related('organization')
+        user = self.request.user
+        
+        # Handle unauthenticated users
+        if not user.is_authenticated:
+            return queryset  # Return all for public viewing
+        
+        # ADMIN users see all sections
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            return queryset
+        
+        # ORG_ADMIN users only see sections from their organization
+        if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
+            return queryset.filter(organization__admin_user=user)
+        
+        # DONOR users see all sections (for viewing/donating)
+        return queryset
+
+    def perform_create(self, serializer):
+        """Automatically set the created_by field to the current user"""
+        serializer.save(created_by=self.request.user)
+
 
 # 3. Needs ViewSet
 class NeedItemViewSet(viewsets.ModelViewSet):
@@ -287,10 +337,26 @@ class NeedItemViewSet(viewsets.ModelViewSet):
     queryset = NeedItem.objects.all()  # Required for router registration
 
     def get_queryset(self):
+        """Filter needs based on user role and organization ownership"""
         queryset = NeedItem.objects.select_related('section', 'section__organization')
+        user = self.request.user
+        
+        # Handle unauthenticated users
+        if not user.is_authenticated:
+            pass  # Return all for public viewing
+        # ADMIN users see all needs
+        elif hasattr(user, 'role') and user.role == 'ADMIN':
+            pass  # Return all
+        # ORG_ADMIN users only see needs from their organization
+        elif hasattr(user, 'role') and user.role == 'ORG_ADMIN':
+            queryset = queryset.filter(section__organization__admin_user=user)
+        # DONOR users see all needs (for viewing/donating)
+        
+        # Filter by priority if requested
         priority = self.request.query_params.get('priority')
         if priority:
             queryset = queryset.filter(priority=priority)
+        
         return queryset
 
 

@@ -73,8 +73,11 @@ export default function EditNeedModal({
         onSuccess();
         onClose();
       }, 900);
-    } catch {
-      setError("Failed to update. Please try again.");
+    } catch (err: any) {
+      console.error("Error updating need:", err);
+      const errorMessage =
+        err?.message || "Failed to update. Please try again.";
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
