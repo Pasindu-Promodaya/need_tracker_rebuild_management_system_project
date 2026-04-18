@@ -35,6 +35,9 @@ export interface NeedItem {
     name: string;
     organization: number;
     organization_name: string;
+    created_by?: number;
+    created_by_username?: string;
+    created_by_role?: "ADMIN" | "ORG_ADMIN" | "DONOR";
   };
 }
 
@@ -44,6 +47,9 @@ export interface Section {
   name: string;
   head_of_section: string;
   needs: NeedItem[];
+  created_by?: number;
+  created_by_username?: string;
+  created_by_role?: "ADMIN" | "ORG_ADMIN" | "DONOR";
 }
 
 export interface Organization {
@@ -107,6 +113,39 @@ export interface Donation {
   };
 }
 
+// Token refresh function
+async function refreshAccessToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) return null;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const newAccessToken = data.access;
+      localStorage.setItem("accessToken", newAccessToken);
+      return newAccessToken;
+    } else {
+      // Refresh token is invalid, clear tokens
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      return null;
+    }
+  } catch (error) {
+    console.error("Token refresh failed:", error);
+    return null;
+  }
+}
+
 // API Functions
 async function fetchAPI<T>(
   endpoint: string,
@@ -124,15 +163,56 @@ async function fetchAPI<T>(
     ...(options?.headers as HeadersInit),
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  // Add debugging for authentication issues
+  if (
+    !token &&
+    (options?.method === "POST" ||
+      options?.method === "PATCH" ||
+      options?.method === "DELETE")
+  ) {
+    console.warn(
+      `[API] No authentication token found for ${options?.method} ${endpoint}`,
+    );
+  } else if (token) {
+    console.debug(
+      `[API] Sending request with authentication token to ${endpoint}`,
+    );
+  }
+
+  let response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
 
-  if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
-      // Optional: Trigger logout or redirect if 401
+  // If we get a 401 and have a refresh token, try to refresh and retry
+  if (response.status === 401 && typeof window !== "undefined") {
+    console.warn(
+      `[API] Received 401 for ${endpoint}, attempting token refresh`,
+    );
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (refreshToken) {
+      const newAccessToken = await refreshAccessToken();
+      if (newAccessToken) {
+        console.debug(`[API] Token refreshed, retrying request`);
+        // Retry with new token
+        const retryHeaders: HeadersInit = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${newAccessToken}`,
+          ...(options?.headers as HeadersInit),
+        };
+        response = await fetch(`${API_BASE_URL}${endpoint}`, {
+          ...options,
+          headers: retryHeaders,
+        });
+      } else {
+        console.error(`[API] Failed to refresh token`);
+      }
+    } else {
+      console.warn(`[API] No refresh token available for retry`);
     }
+  }
+
+  if (!response.ok) {
     const errorText = await response.text();
     let errorMessage = `API Error: ${response.status} ${response.statusText}`;
     try {
@@ -154,6 +234,8 @@ async function fetchAPI<T>(
         }
       }
     } catch {}
+
+    console.error(`[API] Request failed: ${errorMessage}`);
     throw new Error(errorMessage);
   }
 
@@ -202,22 +284,14 @@ export async function registerOrgAdmin(data: {
 }
 
 export async function getAdminApprovals(): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>("/admin/approvals/", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 export async function approveOrgAdmin(userId: number): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>(`/admin/approvals/${userId}/approve/`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
@@ -225,33 +299,21 @@ export async function rejectOrgAdmin(
   userId: number,
   reason: string,
 ): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>(`/admin/approvals/${userId}/reject/`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ reason }),
   });
 }
 
 export async function getApprovedOrgAdmins(): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>("/admin/approvals/approved_list/", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 
 export async function getRejectedOrgAdmins(): Promise<any> {
-  const token = localStorage.getItem("accessToken");
   return fetchAPI<any>("/admin/approvals/rejected_list/", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   });
 }
 

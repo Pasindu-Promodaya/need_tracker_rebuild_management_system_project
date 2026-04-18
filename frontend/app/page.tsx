@@ -98,15 +98,17 @@ export default function Dashboard() {
             : "What's Needed Right Now"}
         </h1>
         <p className="text-gray-500 mt-1">
-          {user?.role === "ADMIN" || user?.role === "ORG_ADMIN"
-            ? "Overview of all organizational needs"
-            : "Browse organizations and find ways to contribute"}
+          {user?.role === "ORG_ADMIN"
+            ? "Overview of the organization"
+            : user?.role === "ADMIN"
+              ? "Overview of all organizations"
+              : "Browse organizations and find ways to contribute"}
         </p>
       </div>
 
       {/* Stats Grid */}
       <div
-        className={`grid gap-6 sm:grid-cols-2 ${user?.role === "DONOR" ? "lg:grid-cols-2" : "lg:grid-cols-4"} mb-8`}
+        className={`grid gap-6 sm:grid-cols-2 ${user?.role === "DONOR" ? "lg:grid-cols-3" : "lg:grid-cols-4"} mb-8`}
       >
         {(user?.role === "ADMIN" || user?.role === "ORG_ADMIN") && (
           <>
@@ -154,6 +156,29 @@ export default function Dashboard() {
             />
           </>
         )}
+        {user?.role === "DONOR" && (
+          <StatsCard
+            title="Organizations"
+            value={totalOrganizations}
+            subtitle="Active organizations"
+            color="blue"
+            icon={
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+            }
+          />
+        )}
         <StatsCard
           title="Total Needs"
           value={totalNeeds}
@@ -198,6 +223,28 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* ORG_ADMIN Quick Actions */}
+      {user?.role === "ORG_ADMIN" && (
+        <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Donation Management
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Review and confirm donations for your organization
+              </p>
+            </div>
+            <Link
+              href="/admin/donations"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium whitespace-nowrap"
+            >
+              Manage Donations →
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Critical Needs Section */}
       {criticalNeeds.length > 0 && (
         <div className="mb-8">
@@ -219,10 +266,10 @@ export default function Dashboard() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {criticalNeeds.slice(0, 6).map((need) => (
-              <NeedCard 
-                key={need.id} 
-                need={need} 
-                showSection 
+              <NeedCard
+                key={need.id}
+                need={need}
+                showSection
                 organizationName={need.section_detail?.organization_name}
               />
             ))}
@@ -230,65 +277,59 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Organizations Section - Visible to Everyone */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Organizations</h2>
-            <p className="text-sm text-gray-500">
-              Browse organizations and their needs
-            </p>
-          </div>
-          {(user?.role === "ADMIN" || user?.role === "ORG_ADMIN") && (
-            <Link
-              href="/organizations"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
-              Manage →
-            </Link>
-          )}
-        </div>
-
-        {organizations.length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {organizations.slice(0, 6).map((org) => (
-              <OrganizationCard key={org.id} organization={org} />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <svg
-              className="w-16 h-16 text-gray-300 mx-auto mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No Organizations Yet
-            </h3>
-            {(user?.role === "ADMIN" || user?.role === "ORG_ADMIN") && (
-              <p className="text-gray-500 mb-4">
-                Get started by adding your first organization
+      {/* Organizations Section - Hidden for ORG_ADMIN */}
+      {user?.role !== "ORG_ADMIN" && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Organizations</h2>
+              <p className="text-sm text-gray-500">
+                View organizations and their needs
               </p>
-            )}
+            </div>
             {user?.role === "ADMIN" && (
               <Link
-                href="/organizations/new"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                href="/organizations"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
               >
-                Add Organization
+                View →
               </Link>
             )}
           </div>
-        )}
-      </div>
+
+          {organizations.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {organizations.slice(0, 6).map((org) => (
+                <OrganizationCard key={org.id} organization={org} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+              <svg
+                className="w-16 h-16 text-gray-300 mx-auto mb-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No Organizations Yet
+              </h3>
+              {(user?.role === "ADMIN" || user?.role === "DONOR") && (
+                <p className="text-gray-500 mb-4">
+                  No organization has been registered in the system.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

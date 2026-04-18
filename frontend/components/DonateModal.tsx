@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
-import Link from 'next/link';
-import { NeedItem, Donation } from '@/lib/api';
-import { Loader2, X } from 'lucide-react';
+import { useState, useRef } from "react";
+import Link from "next/link";
+import { NeedItem, Donation } from "@/lib/api";
+import { Loader2, X } from "lucide-react";
 
 export interface DonationFormData {
   quantity: number;
   message: string;
   estimatedDeliveryDate: string;
-  donorType: 'private' | 'government';
+  donorType: "private" | "government";
   donorName: string;
   donorEmail: string;
   donorPhone: string;
@@ -30,29 +30,37 @@ interface DonateModalProps {
   onSuccess: () => void;
 }
 
-export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: DonateModalProps) {
+export default function DonateModal({
+  needItem,
+  isOpen,
+  onClose,
+  onSuccess,
+}: DonateModalProps) {
   const [quantity, setQuantity] = useState<number>(1);
-  const [message, setMessage] = useState('');
-  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
-  const [donorType, setDonorType] = useState<'private' | 'government'>('private');
-  
+  const [message, setMessage] = useState("");
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
+  const [donorType, setDonorType] = useState<"private" | "government">(
+    "private",
+  );
+
   // Private donor fields
-  const [donorName, setDonorName] = useState('');
-  const [donorEmail, setDonorEmail] = useState('');
-  const [donorPhone, setDonorPhone] = useState('');
-  const [donorOrganization, setDonorOrganization] = useState('');
-  const [donorAddress, setDonorAddress] = useState('');
-  const [donorContact, setDonorContact] = useState('');
-  
+  const [donorName, setDonorName] = useState("");
+  const [donorEmail, setDonorEmail] = useState("");
+  const [donorPhone, setDonorPhone] = useState("");
+  const [donorOrganization, setDonorOrganization] = useState("");
+  const [donorAddress, setDonorAddress] = useState("");
+  const [donorContact, setDonorContact] = useState("");
+
   // Government donor fields
-  const [governmentDepartment, setGovernmentDepartment] = useState('');
-  const [governmentProgram, setGovernmentProgram] = useState('');
-  const [governmentOfficerName, setGovernmentOfficerName] = useState('');
-  const [governmentOfficerDesignation, setGovernmentOfficerDesignation] = useState('');
-  const [governmentOfficerContact, setGovernmentOfficerContact] = useState('');
-  
+  const [governmentDepartment, setGovernmentDepartment] = useState("");
+  const [governmentProgram, setGovernmentProgram] = useState("");
+  const [governmentOfficerName, setGovernmentOfficerName] = useState("");
+  const [governmentOfficerDesignation, setGovernmentOfficerDesignation] =
+    useState("");
+  const [governmentOfficerContact, setGovernmentOfficerContact] = useState("");
+
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -60,32 +68,34 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     // Check if user is authenticated
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem("access_token");
     if (!token) {
-      setError('Please sign in to make a donation. Redirecting to login page...');
+      setError(
+        "Please sign in to make a donation. Redirecting to login page...",
+      );
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = "/login";
       }, 2000);
       setIsLoading(false);
       return;
     }
 
     try {
-      const { createDonation } = await import('@/lib/api');
-      
+      const { createDonation } = await import("@/lib/api");
+
       const donationData: any = {
         need_item: needItem.id,
         quantity: quantity,
-        status: 'PENDING',
+        status: "PENDING",
         message: message,
         estimated_delivery_date: estimatedDeliveryDate || null,
         donor_type: donorType,
       };
 
-      if (donorType === 'private') {
+      if (donorType === "private") {
         donationData.donor_name = donorName;
         donationData.donor_email = donorEmail;
         donationData.donor_phone = donorPhone;
@@ -96,33 +106,34 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
         donationData.government_department = governmentDepartment;
         donationData.government_program = governmentProgram;
         donationData.government_officer_name = governmentOfficerName;
-        donationData.government_officer_designation = governmentOfficerDesignation;
+        donationData.government_officer_designation =
+          governmentOfficerDesignation;
         donationData.government_officer_contact = governmentOfficerContact;
       }
 
       await createDonation(donationData);
-      
+
       // Reset form
       setQuantity(1);
-      setMessage('');
-      setEstimatedDeliveryDate('');
-      setDonorType('private');
-      setDonorName('');
-      setDonorEmail('');
-      setDonorPhone('');
-      setDonorOrganization('');
-      setDonorAddress('');
-      setDonorContact('');
-      
+      setMessage("");
+      setEstimatedDeliveryDate("");
+      setDonorType("private");
+      setDonorName("");
+      setDonorEmail("");
+      setDonorPhone("");
+      setDonorOrganization("");
+      setDonorAddress("");
+      setDonorContact("");
+
       onSuccess();
       onClose();
     } catch (err: any) {
-      if (err.message && err.message.includes('401')) {
-        setError('Your session has expired. Please sign in again.');
-      } else if (err.message && err.message.includes('credentials')) {
-        setError('Authentication failed. Please sign in again.');
+      if (err.message && err.message.includes("401")) {
+        setError("Your session has expired. Please sign in again.");
+      } else if (err.message && err.message.includes("credentials")) {
+        setError("Authentication failed. Please sign in again.");
       } else {
-        setError(err.message || 'Failed to create donation');
+        setError(err.message || "Failed to create donation");
       }
     } finally {
       setIsLoading(false);
@@ -135,11 +146,14 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Make a Donation</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Make a Donation
+            </h2>
             <p className="text-gray-600 mt-1">{needItem.name}</p>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close donation modal"
             className="text-gray-400 hover:text-gray-600"
           >
             <X size={24} />
@@ -151,9 +165,12 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
               <p>{error}</p>
-              {error.includes('sign in') && (
+              {error.includes("sign in") && (
                 <Link href="/login">
-                  <button type="button" className="mt-2 text-blue-600 hover:text-blue-800 font-semibold underline">
+                  <button
+                    type="button"
+                    className="mt-2 text-blue-600 hover:text-blue-800 font-semibold underline"
+                  >
                     Go to Sign In →
                   </button>
                 </Link>
@@ -172,7 +189,10 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
                 min="1"
                 max={needItem.quantity_required}
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) =>
+                  setQuantity(Math.max(1, parseInt(e.target.value) || 1))
+                }
+                aria-label="Quantity to donate"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-600">
@@ -190,6 +210,7 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Add a message with your donation..."
+              aria-label="Donation message"
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -204,6 +225,7 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
               type="date"
               value={estimatedDeliveryDate}
               onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
+              aria-label="Estimated delivery date"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -218,8 +240,10 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
                 <input
                   type="radio"
                   value="private"
-                  checked={donorType === 'private'}
-                  onChange={(e) => setDonorType(e.target.value as 'private' | 'government')}
+                  checked={donorType === "private"}
+                  onChange={(e) =>
+                    setDonorType(e.target.value as "private" | "government")
+                  }
                   className="mr-2"
                 />
                 <span>Private Donor</span>
@@ -228,8 +252,10 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
                 <input
                   type="radio"
                   value="government"
-                  checked={donorType === 'government'}
-                  onChange={(e) => setDonorType(e.target.value as 'private' | 'government')}
+                  checked={donorType === "government"}
+                  onChange={(e) =>
+                    setDonorType(e.target.value as "private" | "government")
+                  }
                   className="mr-2"
                 />
                 <span>Government</span>
@@ -238,7 +264,7 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
           </div>
 
           {/* Conditional Donor Fields */}
-          {donorType === 'private' ? (
+          {donorType === "private" ? (
             <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-gray-900">Donor Information</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -290,7 +316,9 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
             </div>
           ) : (
             <div className="space-y-4 bg-green-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-gray-900">Government Information</h3>
+              <h3 className="font-semibold text-gray-900">
+                Government Information
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 <input
                   type="text"
@@ -317,7 +345,9 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
                   type="text"
                   placeholder="Officer Designation"
                   value={governmentOfficerDesignation}
-                  onChange={(e) => setGovernmentOfficerDesignation(e.target.value)}
+                  onChange={(e) =>
+                    setGovernmentOfficerDesignation(e.target.value)
+                  }
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
@@ -346,7 +376,7 @@ export default function DonateModal({ needItem, isOpen, onClose, onSuccess }: Do
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
               {isLoading && <Loader2 size={18} className="animate-spin" />}
-              {isLoading ? 'Creating...' : 'Donate'}
+              {isLoading ? "Creating..." : "Donate"}
             </button>
           </div>
         </form>

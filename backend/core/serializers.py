@@ -53,6 +53,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         return instance
 
 class RegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
 
@@ -63,6 +64,16 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
+
+        # Make username unique automatically based on input
+        base_username = attrs['username']
+        username = base_username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}_{counter}"
+            counter += 1
+        attrs['username'] = username
+        
         return attrs
 
     def create(self, validated_data):
@@ -79,6 +90,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class OrgAdminRegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
     organization_name = serializers.CharField(write_only=True, required=True)
@@ -91,6 +103,27 @@ class OrgAdminRegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
+        
+        # Check if email is already taken
+        email = attrs.get('email', '')
+        if email:
+            existing_user = User.objects.filter(email=email).first()
+            if existing_user:
+                # If the existing user was previously rejected, allow them to re-register by updating their record
+                if existing_user.role == 'ORG_ADMIN' and existing_user.approval_status == 'REJECTED':
+                    attrs['existing_rejected_user'] = existing_user
+                else:
+                    raise serializers.ValidationError({"email": "A user with this email already exists."})
+
+        # Make username unique automatically based on input (only if creating a new user)
+        if not attrs.get('existing_rejected_user'):
+            base_username = attrs['username']
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}_{counter}"
+                counter += 1
+            attrs['username'] = username
         
         # Extract organization info (write-only fields)
         org_name = attrs.pop('organization_name')
@@ -111,6 +144,22 @@ class OrgAdminRegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        existing_user = validated_data.pop('existing_rejected_user', None)
+        
+        # If they were rejected before, recycle and update their existing account
+        if existing_user:
+            existing_user.first_name = validated_data.get('first_name', existing_user.first_name)
+            existing_user.last_name = validated_data.get('last_name', existing_user.last_name)
+            existing_user.phone_number = validated_data.get('phone_number', existing_user.phone_number)
+            existing_user.requested_organization_name = validated_data.get('requested_organization_name', '')
+            existing_user.requested_organization_type = validated_data.get('requested_organization_type', '')
+            existing_user.requested_organization = validated_data.get('requested_organization')
+            existing_user.approval_status = 'PENDING'
+            existing_user.set_password(validated_data['password'])
+            existing_user.save()
+            return existing_user
+
+        # Otherwise create a brand new user
         user = User.objects.create(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
@@ -168,17 +217,23 @@ class AdminApprovalSerializer(serializers.ModelSerializer):
 
 class SectionDetailSerializer(serializers.ModelSerializer):
     organization_name = serializers.SerializerMethodField()
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
+    created_by_role = serializers.CharField(source='created_by.role', read_only=True, allow_null=True)
     
     def get_organization_name(self, obj):
         return obj.organization.name if obj.organization else None
     
     class Meta:
         model = Section
-        fields = ['id', 'name', 'organization', 'organization_name']
+        fields = ['id', 'name', 'organization', 'organization_name', 'created_by', 'created_by_username', 'created_by_role']
 
 # 2.5 Need Item Serializer with section detail
 class NeedItemSerializer(serializers.ModelSerializer):
     section_detail = SectionDetailSerializer(source='section', read_only=True)
+    quantity_received = serializers.IntegerField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    name = serializers.CharField(required=True, max_length=200)
     
     class Meta:
         model = NeedItem
@@ -191,10 +246,12 @@ class NeedItemSerializer(serializers.ModelSerializer):
 # 3. Section Serializer (Includes the needs inside it)
 class SectionSerializer(serializers.ModelSerializer):
     needs = NeedItemSerializer(many=True, read_only=True)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
+    created_by_role = serializers.CharField(source='created_by.role', read_only=True, allow_null=True)
 
     class Meta:
         model = Section
-        fields = ['id', 'organization', 'name', 'head_of_section', 'needs']
+        fields = ['id', 'organization', 'name', 'head_of_section', 'needs', 'created_by', 'created_by_username', 'created_by_role']
 
 # 4. Organization Serializer (Includes sections inside it)
 class OrganizationSerializer(serializers.ModelSerializer):

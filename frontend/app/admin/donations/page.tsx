@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Donation, getDonations } from "@/lib/api";
+import { Donation, getDonations, getOrganizations } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CheckCircle2, XCircle, Clock, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function AdminPage() {
+export default function DonationManagementPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [organization, setOrganization] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<string>("PENDING");
@@ -18,35 +19,66 @@ export default function AdminPage() {
   const [cancelling, setCancelling] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!authLoading && user?.role !== "ADMIN") {
-      router.push("/");
+    if (!authLoading) {
+      if (user?.role === "ADMIN") {
+        router.push("/admin");
+      } else if (user?.role !== "ORG_ADMIN") {
+        router.push("/");
+      }
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    const fetchDonations = async () => {
-      if (!user || user.role !== "ADMIN") return;
+    const fetchData = async () => {
+      if (!user || user.role !== "ORG_ADMIN") return;
 
       try {
         setIsLoading(true);
         setError("");
-        const data = await getDonations();
-        setDonations(data);
+
+        // Get organization
+        const orgs = await getOrganizations();
+        if (orgs.length > 0) {
+          setOrganization(orgs[0]);
+        }
+
+        // Get all donations
+        const allDonations = await getDonations();
+
+        // Filter donations for this organization's needs
+        if (orgs.length > 0) {
+          const orgId = orgs[0].id;
+          const orgNeedIds = new Set<number>();
+
+          // Collect all need IDs for this organization
+          orgs[0].sections?.forEach((section: any) => {
+            section.needs?.forEach((need: any) => {
+              orgNeedIds.add(need.id);
+            });
+          });
+
+          // Filter donations to only show those for this organization's needs
+          const filteredDonations = allDonations.filter((d) =>
+            orgNeedIds.has(d.need_item),
+          );
+
+          setDonations(filteredDonations);
+        }
       } catch (err: any) {
         setError(err.message || "Failed to fetch donations");
-        console.error("Error fetching donations:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchDonations();
+    fetchData();
   }, [user]);
 
   const handleConfirm = async (donationId: number) => {
     setConfirming(donationId);
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("accessToken");
       const response = await fetch(
         `http://localhost:8000/api/donations/${donationId}/confirm/`,
         {
@@ -78,7 +110,7 @@ export default function AdminPage() {
   const handleCancel = async (donationId: number) => {
     setCancelling(donationId);
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("accessToken");
       const response = await fetch(
         `http://localhost:8000/api/donations/${donationId}/cancel/`,
         {
@@ -133,6 +165,17 @@ export default function AdminPage() {
     }
   };
 
+  const formatStatusDisplay = (status: string): string => {
+    const statusMap: { [key: string]: string } = {
+      PENDING: "Pending",
+      CONFIRMED: "Confirmed",
+      FULFILLED: "Fulfilled",
+      CANCELLED: "Cancelled",
+      ALL: "All",
+    };
+    return statusMap[status] || status;
+  };
+
   const filteredDonations =
     filter === "ALL" ? donations : donations.filter((d) => d.status === filter);
 
@@ -144,7 +187,7 @@ export default function AdminPage() {
     );
   }
 
-  if (user?.role !== "ADMIN") {
+  if (user?.role !== "ORG_ADMIN") {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">
@@ -159,14 +202,16 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900">
             Donation Management
           </h1>
           <p className="text-gray-600 mt-2">
-            Review and confirm donations from donors
+            {organization
+              ? `Review and confirm donations from donors for ${organization.name}`
+              : "Review and confirm donations from donors"}
           </p>
         </div>
 
@@ -194,7 +239,7 @@ export default function AdminPage() {
                     : "text-gray-600 border-transparent hover:text-gray-900"
                 }`}
               >
-                {status}
+                {formatStatusDisplay(status)}
                 {status !== "ALL" && (
                   <span className="ml-2 text-sm">
                     ({donations.filter((d) => d.status === status).length})
@@ -266,7 +311,11 @@ export default function AdminPage() {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${donation.donor_type === "private" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            donation.donor_type === "private"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
                         >
                           {donation.donor_type}
                         </span>
@@ -328,7 +377,9 @@ export default function AdminPage() {
         <div className="grid grid-cols-4 gap-6 mt-8">
           {["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED"].map((status) => (
             <div key={status} className="bg-white rounded-lg shadow p-6">
-              <div className="text-gray-600 text-sm font-medium">{status}</div>
+              <div className="text-gray-600 text-sm font-medium">
+                {formatStatusDisplay(status)}
+              </div>
               <div className="text-3xl font-bold text-gray-900 mt-2">
                 {donations.filter((d) => d.status === status).length}
               </div>

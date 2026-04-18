@@ -129,6 +129,207 @@
   transition: width 300ms ease;
 }
 
+.need-card__progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: all 200ms ease;
+}
+
+/* Width based on data-progress attribute */
+.need-card__progress-fill[data-progress="0"],
+.need-card__progress-fill[data-progress="1"],
+.need-card__progress-fill[data-progress="2"],
+.need-card__progress-fill[data-progress="3"],
+.need-card__progress-fill[data-progress="4"],
+.need-card__progress-fill[data-progress="5"] {
+  width: 5%;
+}
+
+.need-card__progress-fill[data-progress="6"],
+.need-card__progress-fill[data-progress="7"],
+.need-card__progress-fill[data-progress="8"],
+.need-card__progress-fill[data-progress="9"],
+.need-card__progress-fill[data-progress="10"] {
+  width: 10%;
+}
+
+.need-card__progress-fill[data-progress="11"],
+.need-card__progress-fill[data-progress="12"],
+.need-card__progress-fill[data-progress="13"],
+.need-card__progress-fill[data-progress="14"],
+.need-card__progress-fill[data-progress="15"] {
+  width: 15%;
+}
+
+.need-card__progress-fill[data-progress="16"],
+.need-card__progress-fill[data-progress="17"],
+.need-card__progress-fill[data-progress="18"],
+.need-card__progress-fill[data-progress="19"],
+.need-card__progress-fill[data-progress="20"] {
+  width: 20%;
+}
+
+.need-card__progress-fill[data-progress="21"],
+.need-card__progress-fill[data-progress="22"],
+.need-card__progress-fill[data-progress="23"],
+.need-card__progress-fill[data-progress="24"],
+.need-card__progress-fill[data-progress="25"] {
+  width: 25%;
+}
+
+.need-card__progress-fill[data-progress="26"],
+.need-card__progress-fill[data-progress="27"],
+.need-card__progress-fill[data-progress="28"],
+.need-card__progress-fill[data-progress="29"],
+.need-card__progress-fill[data-progress="30"] {
+  width: 30%;
+}
+
+.need-card__progress-fill[data-progress="31"],
+.need-card__progress-fill[data-progress="32"],
+.need-card__progress-fill[data-progress="33"],
+.need-card__progress-fill[data-progress="34"],
+.need-card__progress-fill[data-progress="35"] {
+  width: 35%;
+}
+
+.need-card__progress-fill[data-progress="36"],
+.need-card__progress-fill[data-progress="37"],
+.need-card__progress-fill[data-progress="38"],
+.need-card__progress-fill[data-progress="39"],
+.need-card__progress-fill[data-progress="40"] {
+  width: 40%;
+}
+
+.need-card__progress-fill[data-progress="41"],
+.need-card__progress-fill[data-progress="42"],
+.need-card__progress-fill[data-progress="43"],
+.need-card__progress-fill[data-progress="44"],
+.need-card__progress-fill[data-progress="45"] {
+  width: 45%;
+}
+
+.need-card__progress-fill[data-progress="46"],
+.need-card__progress-fill[data-progress="47"],
+.need-card__progress-fill[data-progress="48"],
+.need-card__progress-fill[data-progress="49"],
+.need-card__progress-fill[data-progress="50"] {
+  width: 50%;
+}
+
+.need-card__progress-fill[data-progress="51"],
+.need-card__progress-fill[data-progress="52"],
+.need-card__progress-fill[data-progress="53"],
+.need-card__progress-fill[data-progress="54"],
+.need-card__progress-fill[data-progress="55"] {
+  width: 55%;
+}
+
+.need-card__progress-fill[data-progress="56"],
+.need-card__progress-fill[data-progress="57"],
+.need-card__progress-fill[data-progress="58"],
+.need-card__progress-fill[data-progress="59"],
+.need-card__progress-fill[data-progress="60"] {
+  width: 60%;
+}
+
+.need-card__progress-fill[data-progress="61"],
+.need-card__progress-fill[data-progress="62"],
+.need-card__progress-fill[data-progress="63"],
+.need-card__progress-fill[data-progress="64"],
+.need-card__progress-fill[data-progress="65"] {
+  width: 65%;
+}
+
+.need-card__progress-fill[data-progress="66"],
+.need-card__progress-fill[data-progress="67"],
+.need-card__progress-fill[data-progress="68"],
+.need-card__progress-fill[data-progress="69"],
+.need-card__progress-fill[data-progress="70"] {
+  width: 70%;
+}
+
+.need-card__progress-fill[data-progress="71"],
+.need-card__progress-fill[data-progress="72"],
+.need-card__progress-fill[data-progress="73"],
+.need-card__progress-fill[data-progress="74"],
+.need-card__progress-fill[data-progress="75"] {
+  width: 75%;
+}
+
+.need-card__progress-fill[data-progress="76"],
+.need-card__progress-fill[data-progress="77"],
+.need-card__progress-fill[data-progress="78"],
+.need-card__progress-fill[data-progress="79"],
+.need-card__progress-fill[data-progress="80"] {
+  width: 80%;
+}
+
+.need-card__progress-fill[data-progress="81"],
+.need-card__progress-fill[data-progress="82"],
+.need-card__progress-fill[data-progress="83"],
+.need-card__progress-fill[data-progress="84"],
+.need-card__progress-fill[data-progress="85"] {
+  width: 85%;
+}
+
+.need-card__progress-fill[data-progress="86"],
+.need-card__progress-fill[data-progress="87"],
+.need-card__progress-fill[data-progress="88"],
+.need-card__progress-fill[data-progress="89"],
+.need-card__progress-fill[data-progress="90"] {
+  width: 90%;
+}
+
+.need-card__progress-fill[data-progress="91"],
+.need-card__progress-fill[data-progress="92"],
+.need-card__progress-fill[data-progress="93"],
+.need-card__progress-fill[data-progress="94"],
+.need-card__progress-fill[data-progress="95"] {
+  width: 95%;
+}
+
+.need-card__progress-fill[data-progress="96"],
+.need-card__progress-fill[data-progress="97"],
+.need-card__progress-fill[data-progress="98"],
+.need-card__progress-fill[data-progress="99"],
+.need-card__progress-fill[data-progress="100"] {
+  width: 100%;
+}
+
+/* Color variants */
+.need-card__progress-fill--0to25 {
+  background: #ef4444;
+}
+
+.need-card__progress-fill--25to50 {
+  background: #eab308;
+}
+
+.need-card__progress-fill--50to75 {
+  background: #3b82f6;
+}
+
+.need-card__progress-fill--75to100 {
+  background: #3b82f6;
+}
+
+.need-card__progress-fill--complete {
+  background: #22c55e;
+}
+
+.need-card__progress-fill--good {
+  background: #3b82f6;
+}
+
+.need-card__progress-fill--medium {
+  background: #eab308;
+}
+
+.need-card__progress-fill--low {
+  background: #ef4444;
+}
+
 .need-progress--complete::-webkit-progress-value,
 .need-progress--complete::-moz-progress-bar {
   background: #22c55e;

@@ -5,13 +5,43 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow admins to edit objects.
     Read-only access for everyone else.
+    ORG_ADMIN users can only edit their own organization's data.
     """
     def has_permission(self, request, view) -> bool:
         # Read permissions are allowed for any request
         if request.method in permissions.SAFE_METHODS:
             return True
         # Write permissions for authenticated system admins and org admins
-        return request.user and request.user.is_authenticated and request.user.role in ['ADMIN', 'ORG_ADMIN']
+        return (request.user and request.user.is_authenticated and 
+                hasattr(request.user, 'role') and
+                request.user.role in ['ADMIN', 'ORG_ADMIN'])
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        # Read permissions are allowed for any request
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        
+        # Check if user has role attribute
+        if not hasattr(request.user, 'role'):
+            return False
+        
+        # System admins can edit anything
+        if request.user.role == 'ADMIN':
+            return True
+        
+        # Org admins can only edit their own organization's data
+        if request.user.role == 'ORG_ADMIN':
+            # For Organization objects
+            if obj.__class__.__name__ == 'Organization':
+                return obj.admin_user == request.user
+            # For Section, NeedItem, and other objects with organization reference
+            elif hasattr(obj, 'organization'):
+                return obj.organization.admin_user == request.user
+            # For Section checking
+            elif hasattr(obj, 'section') and hasattr(obj.section, 'organization'):
+                return obj.section.organization.admin_user == request.user
+        
+        return False
 
 
 class IsOrgAdminOrReadOnly(permissions.BasePermission):

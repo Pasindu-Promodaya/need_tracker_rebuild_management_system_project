@@ -10,6 +10,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.utils import timezone
+from django.utils.timezone import localtime
 from django.core.mail import send_mail
 from django.conf import settings
 from .serializers import (
@@ -24,6 +26,7 @@ from .serializers import (
     UserSerializer,
     UpdateProfileSerializer
 )
+from .serializers_jwt import get_tokens_for_user
 
 User = get_user_model()
 
@@ -35,7 +38,11 @@ class IsAdminOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if request.method in ('GET', 'HEAD', 'OPTIONS'):
             return True
-        return request.user and request.user.is_authenticated and request.user.role in ('ADMIN', 'ORG_ADMIN')
+        # Debug logging
+        if not request.user or not request.user.is_authenticated:
+            print(f"[DEBUG] Unauthenticated {request.method} request to {request.path}")
+            print(f"[DEBUG] User: {request.user}, Authenticated: {request.user.is_authenticated if request.user else 'No user'}")
+        return request.user and request.user.is_authenticated and hasattr(request.user, 'role') and request.user.role in ('ADMIN', 'ORG_ADMIN')
 
 
 class IsAdminUser(BasePermission):
@@ -69,14 +76,10 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        # Generate tokens
-        refresh = RefreshToken.for_user(user)
+        # Generate tokens with custom claims
+        token_data = get_tokens_for_user(user)
         
-        return Response({
-            "user": UserSerializer(user).data,
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        }, status=status.HTTP_201_CREATED)
+        return Response(token_data, status=status.HTTP_201_CREATED)
 
 class MeView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
@@ -120,26 +123,33 @@ class OrgAdminRegisterView(generics.CreateAPIView):
 def custom_login(request):
     """
     Custom login endpoint that checks if user is approved.
+    Allows login with either username or email.
     Only approved users can login (approval_status = 'APPROVED')
     """
     from rest_framework_simplejwt.views import TokenObtainPairView
+    from django.db.models import Q
     
     username = request.data.get('username')
     password = request.data.get('password')
     
     if not username or not password:
         return Response(
-            {'error': 'Username and password are required'},
+            {'error': 'Username/Email and password are required'},
             status=status.HTTP_400_BAD_REQUEST
         )
     
     try:
-        user = User.objects.get(username=username)
+        # Allow login by either username or email
+        user = User.objects.get(Q(username=username) | Q(email=username))
     except User.DoesNotExist:
         return Response(
             {'error': 'Invalid credentials'},
             status=status.HTTP_401_UNAUTHORIZED
         )
+    except User.MultipleObjectsReturned:
+        # If multiple users have the same username, fallback to checking email
+        # This shouldn't typically happen if email is unique, but handles legacy cases
+        user = User.objects.filter(Q(username=username) | Q(email=username)).first()
     
     # Check if user is approved
     if user.role == 'ORG_ADMIN':
@@ -160,14 +170,10 @@ def custom_login(request):
             status=status.HTTP_401_UNAUTHORIZED
         )
     
-    # Generate tokens
-    refresh = RefreshToken.for_user(user)
+    # Generate tokens with custom claims
+    token_data = get_tokens_for_user(user)
     
-    return Response({
-        "user": UserSerializer(user).data,
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-    }, status=status.HTTP_200_OK)
+    return Response(token_data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -248,13 +254,42 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     serializer_class = OrganizationSerializer
     permission_classes = [IsAdminOrReadOnly]
 
+    def get_queryset(self):
+        """Filter organizations based on user role"""
+        queryset = Organization.objects.all()
+        user = self.request.user
+        
+        # Handle unauthenticated users
+        if not user.is_authenticated:
+            return queryset  # Return all for public viewing
+        
+        # ADMIN users see all organizations
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            return queryset
+        
+        # ORG_ADMIN users only see their own organization
+        if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
+            return queryset.filter(admin_user=user)
+        
+        # DONOR users see all organizations (for viewing/donating)
+        return queryset
+
     def create(self, request, *args, **kwargs):
-        if Organization.objects.exists():
-            return Response(
-                {"detail": "Only one organization is allowed in this system. An organization already exists."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # ORG_ADMIN users can only create one organization
+        if (hasattr(request.user, 'role') and request.user.role == 'ORG_ADMIN'):
+            if Organization.objects.filter(admin_user=request.user).exists():
+                return Response(
+                    {"detail": "You can only create one organization. You already have an organization."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        """Set the admin_user to the current user if they're an ORG_ADMIN"""
+        if hasattr(self.request.user, 'role') and self.request.user.role == 'ORG_ADMIN':
+            serializer.save(admin_user=self.request.user)
+        else:
+            serializer.save()
 
     # Custom action to get hierarchy (Org -> Sections -> Needs)
     @action(detail=True, methods=['get'])
@@ -270,6 +305,30 @@ class SectionViewSet(viewsets.ModelViewSet):
     serializer_class = SectionSerializer
     permission_classes = [IsAdminOrReadOnly]
 
+    def get_queryset(self):
+        """Filter sections based on user role and organization ownership"""
+        queryset = Section.objects.select_related('organization')
+        user = self.request.user
+        
+        # Handle unauthenticated users
+        if not user.is_authenticated:
+            return queryset  # Return all for public viewing
+        
+        # ADMIN users see all sections
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            return queryset
+        
+        # ORG_ADMIN users only see sections from their organization
+        if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
+            return queryset.filter(organization__admin_user=user)
+        
+        # DONOR users see all sections (for viewing/donating)
+        return queryset
+
+    def perform_create(self, serializer):
+        """Automatically set the created_by field to the current user"""
+        serializer.save(created_by=self.request.user)
+
 
 # 3. Needs ViewSet
 class NeedItemViewSet(viewsets.ModelViewSet):
@@ -278,10 +337,26 @@ class NeedItemViewSet(viewsets.ModelViewSet):
     queryset = NeedItem.objects.all()  # Required for router registration
 
     def get_queryset(self):
+        """Filter needs based on user role and organization ownership"""
         queryset = NeedItem.objects.select_related('section', 'section__organization')
+        user = self.request.user
+        
+        # Handle unauthenticated users
+        if not user.is_authenticated:
+            pass  # Return all for public viewing
+        # ADMIN users see all needs
+        elif hasattr(user, 'role') and user.role == 'ADMIN':
+            pass  # Return all
+        # ORG_ADMIN users only see needs from their organization
+        elif hasattr(user, 'role') and user.role == 'ORG_ADMIN':
+            queryset = queryset.filter(section__organization__admin_user=user)
+        # DONOR users see all needs (for viewing/donating)
+        
+        # Filter by priority if requested
         priority = self.request.query_params.get('priority')
         if priority:
             queryset = queryset.filter(priority=priority)
+        
         return queryset
 
 
@@ -519,6 +594,51 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         else:
             org_name = 'Not assigned'
         
+        # Send approval email
+        try:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            login_url = f"{frontend_url}/login"
+            
+            # Localize to Asia/Colombo timezone
+            approval_time = localtime(user.approval_decided_at)
+            
+            email_subject = "Your ORG_ADMIN Registration Request Has Been Approved – NeedTracker"
+            email_message = (
+                f"Dear {user.first_name or user.username},\n\n"
+                f"Great news! Your request to register as an Organization Administrator has been approved by the NeedTracker System Administrator.\n\n"
+                f"--- APPROVAL DETAILS ---\n"
+                f"Username: {user.username}\n"
+                f"Email: {user.email}\n"
+                f"Organization Name: {user.requested_organization_name or 'Not specified'}\n"
+                f"Organization Type: {user.requested_organization_type or 'Not specified'}\n"
+                f"Approval Date: {approval_time.strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
+                f"Approved By: System Admin\n\n"
+                f"--- NEXT STEPS ---\n"
+                f"1. Log in to your NeedTracker account using your credentials\n"
+                f"2. Navigate to the Organizations section to manage your organization's needs\n"
+                f"3. You can now create sections, add needs, and manage your organization's dashboard\n\n"
+                f"Login URL: {login_url}\n\n"
+                f"--- ACCOUNT INFORMATION ---\n"
+                f"Your account is now fully active and ready to use. You have access to:\n"
+                f"• Organization management and configuration\n"
+                f"• Need creation and management\n"
+                f"• Document uploads and AI processing\n"
+                f"• Organization dashboard and statistics\n\n"
+                f"If you have any questions or encounter any issues, please contact our support team.\n\n"
+                f"Welcome to NeedTracker!\n"
+                f"— The NeedTracker Team"
+            )
+            
+            send_mail(
+                subject=email_subject,
+                message=email_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send approval email to {user.email}: {str(e)}")
+        
         return Response({
             'message': f'Org admin {user.username} approved and assigned to {org_name}',
             'user': AdminApprovalSerializer(user).data
@@ -526,7 +646,7 @@ class AdminApprovalViewSet(viewsets.ViewSet):
     
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
-        """Reject an org admin registration request"""
+        """Reject an org admin registration request and delete the user account"""
         try:
             user = User.objects.get(id=pk, role='ORG_ADMIN')
         except User.DoesNotExist:
@@ -543,16 +663,61 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         
         reason = request.data.get('reason', 'No reason provided')
         
-        from django.utils import timezone
-        user.approval_status = 'REJECTED'
-        user.rejection_reason = reason
-        user.approval_decided_at = timezone.now()
-        user.approval_decided_by = request.user
-        user.save()
+        # Store user info for email before deletion
+        user_email = user.email
+        user_username = user.username
+        user_first_name = user.first_name or user.username
+        user_org_name = user.requested_organization_name or 'Not specified'
+        user_org_type = user.requested_organization_type or 'Not specified'
+        
+        # Send rejection email BEFORE deleting the account
+        try:
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            
+            # Localize to Asia/Colombo timezone
+            rejection_time = localtime(timezone.now())
+            
+            email_subject = "Your ORG_ADMIN Registration Request Has Been Rejected – NeedTracker"
+            email_message = (
+                f"Dear {user_first_name},\n\n"
+                f"We regret to inform you that your request to register as an Organization Administrator on the NeedTracker platform has been reviewed and rejected by the System Administrator.\n\n"
+                f"--- REJECTION DETAILS ---\n"
+                f"Username: {user_username}\n"
+                f"Email: {user_email}\n"
+                f"Organization Requested: {user_org_name}\n"
+                f"Organization Type: {user_org_type}\n"
+                f"Rejection Date: {rejection_time.strftime('%B %d, %Y at %I:%M %p')} (Asia/Colombo)\n"
+                f"Rejected By: System Admin\n\n"
+                f"--- REJECTION REASON ---\n"
+                f"{reason}\n\n"
+                f"--- WHAT HAPPENS NEXT ---\n"
+                f"You can re-register with the same email address after addressing the rejection reason. \n"
+                f"Your previous account has been removed from the system.\n"
+                f"Please contact the System Administrator if you would like to appeal this decision.\n\n"
+                f"--- CONTACT INFORMATION ---\n"
+                f"If you have any questions or would like to appeal this decision, please reach out to the NeedTracker support team.\n"
+                f"Platform: {frontend_url}\n\n"
+                f"We appreciate your interest in joining the NeedTracker platform.\n"
+                f"— The NeedTracker Team"
+            )
+            
+            send_mail(
+                subject=email_subject,
+                message=email_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send rejection email to {user_email}: {str(e)}")
+        
+        # DELETE the user account so they can register again
+        user.delete()
         
         return Response({
-            'message': f'Org admin {user.username} rejected',
-            'user': AdminApprovalSerializer(user).data
+            'message': f'Org admin registration request rejected and user account deleted. User can now re-register.',
+            'deleted_email': user_email,
+            'rejection_reason': reason
         }, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get'])
