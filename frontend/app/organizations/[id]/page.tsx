@@ -43,14 +43,17 @@ export default function OrganizationDetailPage() {
       setError(
         err instanceof Error ? err.message : "Failed to load organization",
       );
-    } finally {
-      setLoading(false);
     }
   }
 
   useEffect(() => {
     if (params.id) {
-      fetchOrganization();
+      async function load() {
+        setLoading(true);
+        await fetchOrganization();
+        setLoading(false);
+      }
+      load();
     }
   }, [params.id]);
 
@@ -114,20 +117,31 @@ export default function OrganizationDetailPage() {
         ) || []
       : organization.sections || [];
 
+  // Filter out fulfilled needs from sections for public display
+  const sectionsWithUnfulfilledNeeds =
+    filteredSections?.map((section) => ({
+      ...section,
+      needs:
+        section.needs?.filter(
+          (need) => need.quantity_received < need.quantity_required,
+        ) || [],
+    })) || [];
+
   const filteredTotalNeeds =
-    filteredSections?.reduce(
+    sectionsWithUnfulfilledNeeds?.reduce(
       (acc, section) => acc + (section.needs?.length || 0),
       0,
     ) || 0;
 
   const filteredCriticalNeeds =
-    filteredSections?.reduce(
+    sectionsWithUnfulfilledNeeds?.reduce(
       (acc, section) =>
         acc +
         (section.needs?.filter((n) => n.priority === "CRITICAL").length || 0),
       0,
     ) || 0;
 
+  // Calculate fulfilled needs from original filtered sections (before unfulfilled filter)
   const filteredFulfilledNeeds =
     filteredSections?.reduce(
       (acc, section) =>
@@ -386,7 +400,7 @@ export default function OrganizationDetailPage() {
 
         {filteredSections && filteredSections.length > 0 ? (
           <div className="space-y-4">
-            {filteredSections.map((section, index) => (
+            {sectionsWithUnfulfilledNeeds.map((section, index) => (
               <SectionAccordion
                 key={section.id}
                 section={section}

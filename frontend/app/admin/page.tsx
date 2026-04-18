@@ -46,7 +46,7 @@ export default function AdminPage() {
   const handleConfirm = async (donationId: number) => {
     setConfirming(donationId);
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("accessToken");
       const response = await fetch(
         `http://localhost:8000/api/donations/${donationId}/confirm/`,
         {
@@ -78,7 +78,7 @@ export default function AdminPage() {
   const handleCancel = async (donationId: number) => {
     setCancelling(donationId);
     try {
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("accessToken");
       const response = await fetch(
         `http://localhost:8000/api/donations/${donationId}/cancel/`,
         {

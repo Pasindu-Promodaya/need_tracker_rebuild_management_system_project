@@ -155,6 +155,16 @@ export default function OrganizationsPage() {
     }
   };
 
+  // Filter out fulfilled needs from sections for display
+  const sectionsWithUnfulfilledNeeds =
+    organization?.sections?.map((section) => ({
+      ...section,
+      needs:
+        section.needs?.filter(
+          (need) => need.quantity_received < need.quantity_required,
+        ) || [],
+    })) || [];
+
   if (authLoading || !authorized || loading) return <PageLoading />;
 
   return (
@@ -410,7 +420,7 @@ export default function OrganizationsPage() {
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-bold text-gray-900">
-                    {organization.sections?.reduce(
+                    {sectionsWithUnfulfilledNeeds?.reduce(
                       (a, s) => a + (s.needs?.length || 0),
                       0,
                     ) || 0}
@@ -419,7 +429,7 @@ export default function OrganizationsPage() {
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded-lg">
                   <p className="text-2xl font-bold text-red-600">
-                    {organization.sections?.reduce(
+                    {sectionsWithUnfulfilledNeeds?.reduce(
                       (a, s) =>
                         a +
                         (s.needs?.filter((n) => n.priority === "CRITICAL")
@@ -464,7 +474,7 @@ export default function OrganizationsPage() {
 
             {organization.sections && organization.sections.length > 0 ? (
               <div className="space-y-4">
-                {organization.sections.map((section, index) => (
+                {sectionsWithUnfulfilledNeeds.map((section, index) => (
                   <SectionAccordion
                     key={section.id}
                     section={section}
@@ -599,9 +609,7 @@ export default function OrganizationsPage() {
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Organizations
           </h3>
-          <p className="text-gray-500">
-            View all organizations in the system.
-          </p>
+          <p className="text-gray-500">View all organizations in the system.</p>
         </div>
       )}
 

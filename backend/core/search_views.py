@@ -18,19 +18,21 @@ def search(request):
     - type: Type to search in ('organization', 'need', 'all') (default: 'all')
     - priority: Priority filter for needs ('CRITICAL', 'ESSENTIAL', 'NICE') (optional)
     - org_type: Organization type filter (optional)
+    - exclude_fulfilled: Exclude fulfilled needs (true/1) (optional)
     - limit: Number of results to return (default: 50, max: 100)
     - offset: Pagination offset (default: 0)
     
     Examples:
     - /api/search/?q=hospital&type=organization
     - /api/search/?q=stethoscope&type=need&priority=CRITICAL
-    - /api/search/?q=national&limit=25&offset=0
+    - /api/search/?q=national&exclude_fulfilled=true&limit=25&offset=0
     """
     
     query = request.query_params.get('q', '').strip()
     search_type = request.query_params.get('type', 'all')  # 'organization', 'need', 'all'
     priority = request.query_params.get('priority', '')
     org_type = request.query_params.get('org_type', '')
+    exclude_fulfilled = request.query_params.get('exclude_fulfilled', '')
     limit = int(request.query_params.get('limit', 50))
     offset = int(request.query_params.get('offset', 0))
     
@@ -73,6 +75,11 @@ def search(request):
         # Filter by priority if provided
         if priority:
             need_query = need_query.filter(priority=priority)
+        
+        # Filter out fulfilled needs if requested
+        if exclude_fulfilled and exclude_fulfilled.lower() in ('true', '1'):
+            from django.db.models import F
+            need_query = need_query.exclude(quantity_received__gte=F('quantity_required'))
         
         # Apply pagination
         need_results = need_query[offset:offset + limit]

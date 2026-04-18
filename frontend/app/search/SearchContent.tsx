@@ -1,43 +1,44 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { search, SearchResult, Organization, NeedItem } from '@/lib/api';
-import NeedCard from '@/components/NeedCard';
-import OrganizationCard from '@/components/OrganizationCard';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { Search, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { search, SearchResult, Organization, NeedItem } from "@/lib/api";
+import NeedCard from "@/components/NeedCard";
+import OrganizationCard from "@/components/OrganizationCard";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { Search, ChevronRight } from "lucide-react";
 
 export default function SearchContent() {
   const searchParams = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
-  const initialType = (searchParams.get('type') as any) || 'all';
+  const initialQuery = searchParams.get("q") || "";
+  const initialType = (searchParams.get("type") as any) || "all";
 
   const [query, setQuery] = useState(initialQuery);
   const [searchType, setSearchType] = useState(initialType);
-  const [priority, setPriority] = useState('');
+  const [priority, setPriority] = useState("");
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const performSearch = async () => {
     if (!query.trim() || query.length < 2) {
-      setError('Search query must be at least 2 characters');
+      setError("Search query must be at least 2 characters");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const data = await search(query, searchType, {
         priority: priority || undefined,
         limit: 50,
+        excludeFulfilled: true,
       });
       setResults(data);
     } catch (err: any) {
-      setError(err.message || 'Search failed');
+      setError(err.message || "Search failed");
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export default function SearchContent() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       performSearch();
     }
   };
@@ -72,7 +73,10 @@ export default function SearchContent() {
           <form onSubmit={handleSearch} className="space-y-4">
             {/* Search Input */}
             <div className="relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+              <Search
+                className="absolute left-3 top-3 text-gray-400"
+                size={20}
+              />
               <input
                 type="text"
                 value={query}
@@ -87,10 +91,14 @@ export default function SearchContent() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="search-type"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   Search In
                 </label>
                 <select
+                  id="search-type"
                   value={searchType}
                   onChange={(e) => setSearchType(e.target.value as any)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -102,12 +110,16 @@ export default function SearchContent() {
               </div>
 
               {/* Priority Filter (for needs) */}
-              {searchType !== 'organization' && (
+              {searchType !== "organization" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="priority"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Priority
                   </label>
                   <select
+                    id="priority"
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -127,7 +139,7 @@ export default function SearchContent() {
                   disabled={loading}
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-medium"
                 >
-                  {loading ? 'Searching...' : 'Search'}
+                  {loading ? "Searching..." : "Search"}
                 </button>
               </div>
             </div>
@@ -154,8 +166,13 @@ export default function SearchContent() {
             {/* Summary */}
             <div className="mb-8">
               <p className="text-gray-600">
-                Found <span className="font-semibold text-gray-900">{results.total}</span> result
-                {results.total !== 1 ? 's' : ''} for "<span className="font-semibold">{query}</span>"
+                Found{" "}
+                <span className="font-semibold text-gray-900">
+                  {results.total}
+                </span>{" "}
+                result
+                {results.total !== 1 ? "s" : ""} for "
+                <span className="font-semibold">{query}</span>"
               </p>
             </div>
 
@@ -190,7 +207,9 @@ export default function SearchContent() {
                     <NeedCard
                       key={need.id}
                       need={need}
-                      organizationName={need.section_detail?.organization_name || 'Unknown'}
+                      organizationName={
+                        need.section_detail?.organization_name || "Unknown"
+                      }
                     />
                   ))}
                 </div>
@@ -198,15 +217,19 @@ export default function SearchContent() {
             )}
 
             {/* No Results */}
-            {results.organizations.length === 0 && results.needs.length === 0 && (
-              <div className="text-center py-12">
-                <Search className="mx-auto text-gray-400 mb-4" size={48} />
-                <p className="text-gray-600 text-lg">
-                  No results found for "<span className="font-semibold">{query}</span>"
-                </p>
-                <p className="text-gray-500 mt-2">Try searching with different keywords</p>
-              </div>
-            )}
+            {results.organizations.length === 0 &&
+              results.needs.length === 0 && (
+                <div className="text-center py-12">
+                  <Search className="mx-auto text-gray-400 mb-4" size={48} />
+                  <p className="text-gray-600 text-lg">
+                    No results found for "
+                    <span className="font-semibold">{query}</span>"
+                  </p>
+                  <p className="text-gray-500 mt-2">
+                    Try searching with different keywords
+                  </p>
+                </div>
+              )}
           </>
         )}
 
@@ -214,8 +237,12 @@ export default function SearchContent() {
         {!results && !loading && (
           <div className="text-center py-12">
             <Search className="mx-auto text-gray-400 mb-4" size={48} />
-            <p className="text-gray-600 text-lg">Enter a search query to get started</p>
-            <p className="text-gray-500 mt-2">Search for organizations, hospitals, equipment, and more</p>
+            <p className="text-gray-600 text-lg">
+              Enter a search query to get started
+            </p>
+            <p className="text-gray-500 mt-2">
+              Search for organizations, hospitals, equipment, and more
+            </p>
           </div>
         )}
       </div>
