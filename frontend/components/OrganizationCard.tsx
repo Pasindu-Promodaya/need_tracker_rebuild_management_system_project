@@ -51,17 +51,30 @@ export default function OrganizationCard({
 }: OrganizationCardProps) {
   const type = orgTypeConfig[organization.org_type || "OTHER"];
 
-  const totalNeeds =
+  const allNeeds =
     organization.sections?.reduce(
       (acc, section) => acc + (section.needs?.length || 0),
       0,
     ) || 0;
 
-  const criticalNeeds =
+  const unfulfilledNeeds =
     organization.sections?.reduce(
       (acc, section) =>
         acc +
-        (section.needs?.filter((n) => n.priority === "CRITICAL").length || 0),
+        (section.needs?.filter((n) => n.quantity_received < n.quantity_required)
+          .length || 0),
+      0,
+    ) || 0;
+
+  const criticalUnfulfilledNeeds =
+    organization.sections?.reduce(
+      (acc, section) =>
+        acc +
+        (section.needs?.filter(
+          (n) =>
+            n.priority === "CRITICAL" &&
+            n.quantity_received < n.quantity_required,
+        ).length || 0),
       0,
     ) || 0;
 
@@ -75,8 +88,28 @@ export default function OrganizationCard({
       0,
     ) || 0;
 
-  const fulfillmentPct =
-    totalNeeds > 0 ? Math.round((fulfilledNeeds / totalNeeds) * 100) : 0;
+  // Calculate average progress of unfulfilled needs
+  let avgProgress = 0;
+  if (unfulfilledNeeds > 0) {
+    const totalProgress =
+      organization.sections?.reduce(
+        (acc, section) =>
+          acc +
+          (section.needs?.reduce((sAcc, need) => {
+            if (need.quantity_received < need.quantity_required) {
+              return (
+                sAcc + (need.quantity_received / need.quantity_required) * 100
+              );
+            }
+            return sAcc;
+          }, 0) || 0),
+        0,
+      ) || 0;
+    avgProgress = Math.round(totalProgress / unfulfilledNeeds);
+  }
+
+  // For display purposes, show unfulfilled as "totalNeeds"
+  const displayTotalNeeds = unfulfilledNeeds;
 
   return (
     <Link href={`/organizations/${organization.id}`}>
@@ -91,7 +124,7 @@ export default function OrganizationCard({
             >
               {type.label}
             </span>
-            {criticalNeeds > 0 && (
+            {criticalUnfulfilledNeeds > 0 && (
               <span className="flex items-center gap-1 bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">
                 <svg
                   className="w-3 h-3"
@@ -100,7 +133,7 @@ export default function OrganizationCard({
                 >
                   <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
-                {criticalNeeds} critical
+                {criticalUnfulfilledNeeds} critical
               </span>
             )}
           </div>
@@ -159,7 +192,7 @@ export default function OrganizationCard({
               {organization.sections?.length || 0} sections
             </span>
             <span className="text-gray-300">·</span>
-            <span>{totalNeeds} needs</span>
+            <span>{displayTotalNeeds} needs</span>
             {organization.established_year && (
               <>
                 <span className="text-gray-300">·</span>
@@ -169,19 +202,19 @@ export default function OrganizationCard({
           </div>
 
           {/* Fulfillment bar */}
-          {totalNeeds > 0 && (
+          {unfulfilledNeeds > 0 && (
             <div>
               <div className="flex justify-between text-xs text-gray-400 mb-1">
-                <span>Needs fulfilled</span>
+                <span>Needs progress</span>
                 <span className="font-medium text-gray-600">
-                  {fulfillmentPct}%
+                  {avgProgress}%
                 </span>
               </div>
               <progress
-                value={fulfilledNeeds}
-                max={totalNeeds}
+                value={avgProgress}
+                max={100}
                 className="w-full h-1.5 rounded-full overflow-hidden [appearance:none] [&::-webkit-progress-bar]:bg-gray-100 [&::-webkit-progress-value]:bg-green-400 [&::-moz-progress-bar]:bg-green-400"
-                aria-label="Needs fulfilled progress"
+                aria-label="Needs progress"
               />
             </div>
           )}

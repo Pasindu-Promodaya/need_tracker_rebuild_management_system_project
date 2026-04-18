@@ -61,6 +61,7 @@ export default function DonateModal({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -71,7 +72,7 @@ export default function DonateModal({
     setError("");
 
     // Check if user is authenticated
-    const token = localStorage.getItem("access_token");
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       setError(
         "Please sign in to make a donation. Redirecting to login page...",
@@ -113,21 +114,29 @@ export default function DonateModal({
 
       await createDonation(donationData);
 
-      // Reset form
-      setQuantity(1);
-      setMessage("");
-      setEstimatedDeliveryDate("");
-      setDonorType("private");
-      setDonorName("");
-      setDonorEmail("");
-      setDonorPhone("");
-      setDonorOrganization("");
-      setDonorAddress("");
-      setDonorContact("");
+      // Show success message for 3 seconds
+      setSuccess(true);
+      setIsLoading(false);
 
-      onSuccess();
-      onClose();
+      // Close modal after 3 seconds
+      setTimeout(() => {
+        // Reset form
+        setQuantity(1);
+        setMessage("");
+        setEstimatedDeliveryDate("");
+        setDonorType("private");
+        setDonorName("");
+        setDonorEmail("");
+        setDonorPhone("");
+        setDonorOrganization("");
+        setDonorAddress("");
+        setDonorContact("");
+        setSuccess(false);
+        onSuccess();
+        onClose();
+      }, 3000);
     } catch (err: any) {
+      setIsLoading(false);
       if (err.message && err.message.includes("401")) {
         setError("Your session has expired. Please sign in again.");
       } else if (err.message && err.message.includes("credentials")) {
@@ -135,8 +144,6 @@ export default function DonateModal({
       } else {
         setError(err.message || "Failed to create donation");
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -162,223 +169,249 @@ export default function DonateModal({
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
-              <p>{error}</p>
-              {error.includes("sign in") && (
-                <Link href="/login">
-                  <button
-                    type="button"
-                    className="mt-2 text-blue-600 hover:text-blue-800 font-semibold underline"
-                  >
-                    Go to Sign In →
-                  </button>
-                </Link>
-              )}
-            </div>
-          )}
-
-          {/* Quantity Section */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quantity to Donate ({needItem.unit})
-            </label>
-            <div className="flex items-center gap-4">
-              <input
-                type="number"
-                min="1"
-                max={needItem.quantity_required}
-                value={quantity}
-                onChange={(e) =>
-                  setQuantity(Math.max(1, parseInt(e.target.value) || 1))
-                }
-                aria-label="Quantity to donate"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-600">
-                Max: {needItem.quantity_required - needItem.quantity_received}
-              </span>
-            </div>
-          </div>
-
-          {/* Message */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Message
-            </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Add a message with your donation..."
-              aria-label="Donation message"
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Delivery Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Estimated Delivery Date
-            </label>
-            <input
-              type="date"
-              value={estimatedDeliveryDate}
-              onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
-              aria-label="Estimated delivery date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Donor Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Donor Type
-            </label>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="private"
-                  checked={donorType === "private"}
-                  onChange={(e) =>
-                    setDonorType(e.target.value as "private" | "government")
-                  }
-                  className="mr-2"
-                />
-                <span>Private Donor</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="government"
-                  checked={donorType === "government"}
-                  onChange={(e) =>
-                    setDonorType(e.target.value as "private" | "government")
-                  }
-                  className="mr-2"
-                />
-                <span>Government</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Conditional Donor Fields */}
-          {donorType === "private" ? (
-            <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-gray-900">Donor Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={donorName}
-                  onChange={(e) => setDonorName(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={donorEmail}
-                  onChange={(e) => setDonorEmail(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="tel"
-                  placeholder="Phone"
-                  value={donorPhone}
-                  onChange={(e) => setDonorPhone(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Contact Person"
-                  value={donorContact}
-                  onChange={(e) => setDonorContact(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+          {success ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <div className="text-4xl text-green-600">✓</div>
               </div>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Organization"
-                  value={donorOrganization}
-                  onChange={(e) => setDonorOrganization(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <textarea
-                  placeholder="Address"
-                  value={donorAddress}
-                  onChange={(e) => setDonorAddress(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Donation Submitted Successfully!
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Thank you for your generous donation. The organization will
+                review and confirm your donation shortly. This modal will close
+                automatically in a moment.
+              </p>
+              <div className="w-full bg-gray-100 rounded-full h-1">
+                <div className="w-full bg-green-600 h-1 rounded-full animate-pulse"></div>
               </div>
             </div>
           ) : (
-            <div className="space-y-4 bg-green-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-gray-900">
-                Government Information
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Department"
-                  value={governmentDepartment}
-                  onChange={(e) => setGovernmentDepartment(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Program"
-                  value={governmentProgram}
-                  onChange={(e) => setGovernmentProgram(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Officer Name"
-                  value={governmentOfficerName}
-                  onChange={(e) => setGovernmentOfficerName(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Officer Designation"
-                  value={governmentOfficerDesignation}
-                  onChange={(e) =>
-                    setGovernmentOfficerDesignation(e.target.value)
-                  }
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="tel"
-                  placeholder="Officer Contact"
-                  value={governmentOfficerContact}
-                  onChange={(e) => setGovernmentOfficerContact(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <>
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
+                  <p>{error}</p>
+                  {error.includes("sign in") && (
+                    <Link href="/login">
+                      <button
+                        type="button"
+                        className="mt-2 text-blue-600 hover:text-blue-800 font-semibold underline"
+                      >
+                        Go to Sign In →
+                      </button>
+                    </Link>
+                  )}
+                </div>
+              )}
+
+              {/* Quantity Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quantity to Donate ({needItem.unit})
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="number"
+                    min="1"
+                    max={needItem.quantity_required}
+                    value={quantity}
+                    onChange={(e) =>
+                      setQuantity(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                    aria-label="Quantity to donate"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-600">
+                    Max:{" "}
+                    {needItem.quantity_required - needItem.quantity_received}
+                  </span>
+                </div>
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Add a message with your donation..."
+                  aria-label="Donation message"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </div>
-          )}
 
-          {/* Footer buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
-            >
-              {isLoading && <Loader2 size={18} className="animate-spin" />}
-              {isLoading ? "Creating..." : "Donate"}
-            </button>
-          </div>
+              {/* Delivery Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estimated Delivery Date
+                </label>
+                <input
+                  type="date"
+                  value={estimatedDeliveryDate}
+                  onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
+                  aria-label="Estimated delivery date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Donor Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Donor Type
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="private"
+                      checked={donorType === "private"}
+                      onChange={(e) =>
+                        setDonorType(e.target.value as "private" | "government")
+                      }
+                      className="mr-2"
+                    />
+                    <span>Private Donor</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="government"
+                      checked={donorType === "government"}
+                      onChange={(e) =>
+                        setDonorType(e.target.value as "private" | "government")
+                      }
+                      className="mr-2"
+                    />
+                    <span>Government</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Conditional Donor Fields */}
+              {donorType === "private" ? (
+                <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900">
+                    Donor Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      value={donorName}
+                      onChange={(e) => setDonorName(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={donorEmail}
+                      onChange={(e) => setDonorEmail(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Phone"
+                      value={donorPhone}
+                      onChange={(e) => setDonorPhone(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Contact Person"
+                      value={donorContact}
+                      onChange={(e) => setDonorContact(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="Organization"
+                      value={donorOrganization}
+                      onChange={(e) => setDonorOrganization(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <textarea
+                      placeholder="Address"
+                      value={donorAddress}
+                      onChange={(e) => setDonorAddress(e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 bg-green-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-900">
+                    Government Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Department"
+                      value={governmentDepartment}
+                      onChange={(e) => setGovernmentDepartment(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Program"
+                      value={governmentProgram}
+                      onChange={(e) => setGovernmentProgram(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Officer Name"
+                      value={governmentOfficerName}
+                      onChange={(e) => setGovernmentOfficerName(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Officer Designation"
+                      value={governmentOfficerDesignation}
+                      onChange={(e) =>
+                        setGovernmentOfficerDesignation(e.target.value)
+                      }
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Officer Contact"
+                      value={governmentOfficerContact}
+                      onChange={(e) =>
+                        setGovernmentOfficerContact(e.target.value)
+                      }
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Footer buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+                >
+                  {isLoading && <Loader2 size={18} className="animate-spin" />}
+                  {isLoading ? "Creating..." : "Donate"}
+                </button>
+              </div>
+            </>
+          )}
         </form>
       </div>
     </div>

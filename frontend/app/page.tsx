@@ -16,22 +16,26 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [orgs, needs] = await Promise.all([
-          getOrganizations(),
-          getNeeds("CRITICAL"),
-        ]);
-        setOrganizations(orgs);
-        setCriticalNeeds(needs);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
+  const fetchData = async () => {
+    try {
+      const [orgs, needs] = await Promise.all([
+        getOrganizations(),
+        getNeeds("CRITICAL", true),
+      ]);
+      setOrganizations(orgs);
+      setCriticalNeeds(needs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data");
     }
-    fetchData();
+  };
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      await fetchData();
+      setLoading(false);
+    }
+    loadData();
   }, []);
 
   if (loading) return <PageLoading />;
@@ -75,12 +79,17 @@ export default function Dashboard() {
   const totalSections = Array.isArray(organizations)
     ? organizations.reduce((acc, org) => acc + (org.sections?.length || 0), 0)
     : 0;
+  // Count only unfulfilled needs (quantity_received < quantity_required)
   const totalNeeds = Array.isArray(organizations)
     ? organizations.reduce(
         (acc, org) =>
           acc +
           (org.sections?.reduce(
-            (sacc, sec) => sacc + (sec.needs?.length || 0),
+            (sacc, sec) =>
+              sacc +
+              (sec.needs?.filter(
+                (n) => n.quantity_received < n.quantity_required,
+              ).length || 0),
             0,
           ) || 0),
         0,

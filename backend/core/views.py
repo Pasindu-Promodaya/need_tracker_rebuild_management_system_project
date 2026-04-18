@@ -357,6 +357,13 @@ class NeedItemViewSet(viewsets.ModelViewSet):
         if priority:
             queryset = queryset.filter(priority=priority)
         
+        # Filter out fulfilled needs if requested (when quantity_received >= quantity_required)
+        exclude_fulfilled = self.request.query_params.get('exclude_fulfilled')
+        if exclude_fulfilled and exclude_fulfilled.lower() in ('true', '1'):
+            # Only return needs that are NOT fulfilled
+            from django.db.models import F
+            queryset = queryset.exclude(quantity_received__gte=F('quantity_required'))
+        
         return queryset
 
 

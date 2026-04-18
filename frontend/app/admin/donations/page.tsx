@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { Donation, getDonations, getOrganizations } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { CheckCircle2, XCircle, Clock, Gift } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Gift, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import styles from "../donations.module.css";
 
 export default function DonationManagementPage() {
   const router = useRouter();
@@ -17,6 +18,8 @@ export default function DonationManagementPage() {
   const [filter, setFilter] = useState<string>("PENDING");
   const [confirming, setConfirming] = useState<number | null>(null);
   const [cancelling, setCancelling] = useState<number | null>(null);
+  const [showFulfilledModal, setShowFulfilledModal] = useState(false);
+  const [needsMap, setNeedsMap] = useState<Map<number, any>>(new Map());
 
   useEffect(() => {
     if (!authLoading) {
@@ -40,6 +43,15 @@ export default function DonationManagementPage() {
         const orgs = await getOrganizations();
         if (orgs.length > 0) {
           setOrganization(orgs[0]);
+
+          // Build needs map for quick lookup
+          const nMap = new Map<number, any>();
+          orgs[0].sections?.forEach((section: any) => {
+            section.needs?.forEach((need: any) => {
+              nMap.set(need.id, need);
+            });
+          });
+          setNeedsMap(nMap);
         }
 
         // Get all donations
@@ -209,9 +221,7 @@ export default function DonationManagementPage() {
             Donation Management
           </h1>
           <p className="text-gray-600 mt-2">
-            {organization
-              ? `Review and confirm donations from donors for ${organization.name}`
-              : "Review and confirm donations from donors"}
+            Review and confirm donations from donors
           </p>
         </div>
 
@@ -376,23 +386,193 @@ export default function DonationManagementPage() {
 
         <div className="grid grid-cols-4 gap-6 mt-8">
           {["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED"].map((status) => (
-            <div key={status} className="bg-white rounded-lg shadow p-6">
+            <div
+              key={status}
+              onClick={() => {
+                if (status === "FULFILLED") {
+                  setShowFulfilledModal(true);
+                }
+              }}
+              className={`bg-white rounded-lg shadow p-6 ${
+                status === "FULFILLED"
+                  ? "cursor-pointer hover:shadow-lg transition"
+                  : ""
+              }`}
+            >
               <div className="text-gray-600 text-sm font-medium">
                 {formatStatusDisplay(status)}
               </div>
               <div className="text-3xl font-bold text-gray-900 mt-2">
-                {donations.filter((d) => d.status === status).length}
+                {status === "FULFILLED"
+                  ? Array.from(needsMap.values()).filter((need) => {
+                      const remaining =
+                        need.quantity_required - need.quantity_received;
+                      return remaining <= 0;
+                    }).length
+                  : donations.filter((d) => d.status === status).length}
               </div>
               <div className="text-gray-600 text-sm mt-2">
                 Total:{" "}
-                {donations
-                  .filter((d) => d.status === status)
-                  .reduce((sum, d) => sum + d.quantity, 0)}{" "}
+                {status === "FULFILLED"
+                  ? Array.from(needsMap.values())
+                      .filter((need) => {
+                        const remaining =
+                          need.quantity_required - need.quantity_received;
+                        return remaining <= 0;
+                      })
+                      .reduce((sum, need) => sum + need.quantity_required, 0)
+                  : donations
+                      .filter((d) => d.status === status)
+                      .reduce((sum, d) => sum + d.quantity, 0)}{" "}
                 units
               </div>
+              {status === "FULFILLED" && (
+                <div className="text-blue-600 text-xs mt-3 font-semibold">
+                  View History →
+                </div>
+              )}
             </div>
           ))}
         </div>
+
+        {/* Fulfilled Donations Modal */}
+        {showFulfilledModal && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Fulfilled Donations History
+                  </h2>
+                  <p className="text-gray-600 mt-1">
+                    Completed and delivered donations
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowFulfilledModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                  title="Close fulfilled donations history"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="overflow-y-auto flex-1 p-6">
+                {Array.from(needsMap.values()).filter((need) => {
+                  const remaining =
+                    need.quantity_required - need.quantity_received;
+                  return remaining <= 0;
+                }).length === 0 ? (
+                  <div className="text-center text-gray-500 py-12">
+                    No fulfilled needs yet
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {Array.from(needsMap.values())
+                      .filter((need) => {
+                        const remaining =
+                          need.quantity_required - need.quantity_received;
+                        return remaining <= 0;
+                      })
+                      .map((need) => {
+                        const remaining =
+                          need.quantity_required - need.quantity_received;
+                        const percentComplete = Math.min(
+                          100,
+                          Math.round(
+                            (need.quantity_received / need.quantity_required) *
+                              100,
+                          ),
+                        );
+                        const priorityColorMap: Record<string, string> = {
+                          CRITICAL: "border-red-200 bg-red-50",
+                          ESSENTIAL: "border-orange-200 bg-orange-50",
+                          NICE: "border-green-200 bg-green-50",
+                        };
+                        const priorityColor =
+                          priorityColorMap[need.priority] || "border-gray-200";
+
+                        const priorityBadgeColorMap: Record<string, string> = {
+                          CRITICAL: "bg-red-100 text-red-800",
+                          ESSENTIAL: "bg-orange-100 text-orange-800",
+                          NICE: "bg-green-100 text-green-800",
+                        };
+                        const priorityBadgeColor =
+                          priorityBadgeColorMap[need.priority];
+
+                        return (
+                          <div
+                            key={need.id}
+                            className={`border rounded-lg p-4 ${priorityColor}`}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h3 className="font-semibold text-gray-900">
+                                  {need.name}
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  {need.section_detail?.name}
+                                </p>
+                              </div>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${priorityBadgeColor}`}
+                              >
+                                {need.priority}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">
+                              {need.description}
+                            </p>
+                            <div className="mb-3">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Progress
+                                </span>
+                                <span className="text-sm font-medium text-gray-700">
+                                  {percentComplete}%
+                                </span>
+                              </div>
+                              <div className={styles.progressBar}>
+                                <div
+                                  className={styles.progressFill}
+                                  data-progress-width={percentComplete}
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-between text-sm mb-3">
+                              <span className="text-green-600 font-medium">
+                                Received: {need.quantity_received} {need.unit}
+                              </span>
+                              <span className="text-gray-600">
+                                Needed: {Math.max(0, remaining)} {need.unit}
+                              </span>
+                            </div>
+                            <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-center">
+                              <p className="text-sm font-semibold text-green-700">
+                                ✓ Requirement Fulfilled
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 border-t border-gray-200 p-4 flex justify-end">
+                <button
+                  onClick={() => setShowFulfilledModal(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -382,8 +382,14 @@ export const deleteSection = (id: number) =>
   fetchAPI<void>(`/sections/${id}/`, { method: "DELETE" });
 
 // Needs
-export const getNeeds = async (priority?: string) => {
-  const query = priority ? `?priority=${priority}` : "";
+export const getNeeds = async (
+  priority?: string,
+  excludeFulfilled?: boolean,
+) => {
+  const params = new URLSearchParams();
+  if (priority) params.append("priority", priority);
+  if (excludeFulfilled) params.append("exclude_fulfilled", "true");
+  const query = params.toString() ? `?${params.toString()}` : "";
   const response = await fetchAPI<any>(`/needs/${query}`);
   return (response.results || response) as NeedItem[];
 };
@@ -500,6 +506,7 @@ export async function search(
     org_type?: string;
     limit?: number;
     offset?: number;
+    excludeFulfilled?: boolean;
   },
 ): Promise<SearchResult> {
   const params = new URLSearchParams({
@@ -507,6 +514,7 @@ export async function search(
     type,
     ...(options?.priority && { priority: options.priority }),
     ...(options?.org_type && { org_type: options.org_type }),
+    ...(options?.excludeFulfilled && { exclude_fulfilled: "true" }),
     limit: String(options?.limit || 50),
     offset: String(options?.offset || 0),
   });
