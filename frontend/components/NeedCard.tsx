@@ -11,6 +11,7 @@ import {
 import DonateModal from "./DonateModal";
 import { Heart, LogIn } from "lucide-react";
 import Link from "next/link";
+import "./NeedCard.css";
 
 interface NeedCardProps {
   need: NeedItem;
@@ -128,16 +129,18 @@ export default function NeedCard({
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${
+              className={`need-card__progress-fill ${
                 progress >= 100
-                  ? "bg-green-500"
-                  : progress >= 50
-                    ? "bg-blue-500"
-                    : progress >= 25
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
+                  ? "need-card__progress-fill--complete"
+                  : progress >= 75
+                    ? "need-card__progress-fill--75to100"
+                    : progress >= 50
+                      ? "need-card__progress-fill--50to75"
+                      : progress >= 25
+                        ? "need-card__progress-fill--25to50"
+                        : "need-card__progress-fill--0to25"
               }`}
-              style={{ width: `${progress}%` }}
+              data-progress={Math.round(progress)}
             />
           </div>
         </div>
