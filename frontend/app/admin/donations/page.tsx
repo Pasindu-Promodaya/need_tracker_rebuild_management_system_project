@@ -10,7 +10,7 @@ import styles from "../donations.module.css";
 
 export default function DonationManagementPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [organization, setOrganization] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);

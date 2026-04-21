@@ -69,8 +69,6 @@ export default function LoginContent() {
           password,
           password2: confirmPassword,
           phone_number: phoneNumber,
-          first_name: firstName,
-          last_name: lastName,
         });
       } else if (activeTab === "org-admin") {
         if (password !== confirmPassword) {

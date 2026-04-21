@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # PostgreSQL Database
@@ -14,7 +13,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rebuild_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,33 +26,29 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: rebuild_backend
-    command: python manage.py runserver 0.0.0.0:8000
     environment:
       DEBUG: "True"
-      ALLOWED_HOSTS: "localhost,127.0.0.1,backend,backend:8000"
-      DATABASE_URL: "postgresql://postgres:admin1234@db:5432/rebuild_db"
-      POSTGRES_DB: rebuild_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin1234
-      POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
-      SECRET_KEY: "your-secret-key-change-in-production"
+      SECRET_KEY: "django-insecure-3z55ai11+0pf5gb5_fb8g9^69zpj6e*3fvttevtwt9-6+j_k^e"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,backend,0.0.0.0"
+      # PostgreSQL settings matching settings.py variable names
+      DB_NAME: rebuild_db
+      DB_USER: postgres
+      DB_PASSWORD: admin1234
+      DB_HOST: db
+      DB_PORT: "5432"
       FRONTEND_URL: "http://localhost:3000"
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - media_data:/app/media
     depends_on:
       db:
         condition: service_healthy
     networks:
       - rebuild_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/organizations/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    restart: unless-stopped
 
   # Next.js Frontend
   frontend:
@@ -62,26 +57,19 @@ services:
       dockerfile: Dockerfile
     container_name: rebuild_frontend
     environment:
-      NEXT_PUBLIC_API_URL: "http://backend:8000/api"
+      # Browser-accessible URL - must use localhost (not container name)
+      NEXT_PUBLIC_API_URL: "http://localhost:8000/api"
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
     depends_on:
       - backend
     networks:
       - rebuild_network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  media_data:
 
 networks:
   rebuild_network:
