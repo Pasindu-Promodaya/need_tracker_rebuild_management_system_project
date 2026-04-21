@@ -7,13 +7,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm ci || npm ci || npm ci
 
 # Copy source code
 COPY . .
 
 # Create .env.local
-RUN echo "NEXT_PUBLIC_API_URL=http://backend:8000/api" > .env.local
+RUN echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api" > .env.local
 
 # Build the Next.js app
 RUN npm run build
@@ -25,7 +28,10 @@ WORKDIR /app
 
 # Install production dependencies only
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm ci --only=production || npm ci --only=production || npm ci --only=production
 
 # Copy built app from builder
 COPY --from=builder /app/.next ./.next

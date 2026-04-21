@@ -10,11 +10,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies (PostgreSQL client only, no SQLite needed)
+RUN (apt-get update || apt-get update || apt-get update) && \
+    (apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     postgresql-client \
+    curl || \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    curl) \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better caching)
@@ -27,23 +34,12 @@ RUN pip install --upgrade pip && \
 # Copy project files
 COPY . .
 
-# Create a script to run migrations and start server
-RUN echo '#!/bin/bash' > /app/entrypoint.sh && \
-    echo 'set -e' >> /app/entrypoint.sh && \
-    echo 'echo "Running database migrations..."' >> /app/entrypoint.sh && \
-    echo 'python manage.py migrate --noinput' >> /app/entrypoint.sh && \
-    echo 'echo "Creating default admin..."' >> /app/entrypoint.sh && \
-    echo 'python manage.py create_default_admin' >> /app/entrypoint.sh && \
-    echo 'echo "Starting Django server..."' >> /app/entrypoint.sh && \
-    echo 'python manage.py runserver 0.0.0.0:8000' >> /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
-
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/organizations/')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/api/organizations/ || exit 1
 
 # Run the entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
