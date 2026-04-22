@@ -235,7 +235,6 @@ async function fetchAPI<T>(
       }
     } catch {}
 
-    console.error(`[API] Request failed: ${errorMessage}`);
     throw new Error(errorMessage);
   }
 
