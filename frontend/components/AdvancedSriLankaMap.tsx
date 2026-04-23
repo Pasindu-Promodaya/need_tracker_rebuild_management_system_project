@@ -21,10 +21,13 @@ export default function AdvancedSriLankaMap({ organizations = [] }: AdvancedSriL
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [hospitalCount, setHospitalCount] = useState(9);
   const [totalBeds, setTotalBeds] = useState(12000);
 
   useEffect(() => {
+    let isCancelled = false;
+
     const hospitalLocations = [
       { id: 1, name: "National Hospital", district: "Colombo", lat: 6.9271, lng: 80.7789, beds: 3000 },
       { id: 2, name: "Central Provincial Hospital", district: "Kandy", lat: 7.2906, lng: 80.6337, beds: 2500 },
@@ -38,13 +41,28 @@ export default function AdvancedSriLankaMap({ organizations = [] }: AdvancedSriL
     ];
 
     const initMap = async () => {
-      if (!mapContainer.current || map.current) return;
+      if (!mapContainer.current || map.current) {
+        return;
+      }
+
+      const container = mapContainer.current;
 
       try {
         const LeafletLib = await initLeaflet();
 
+        if (isCancelled || map.current) {
+          return;
+        }
+
+        // In React Strict Mode, effects can run twice in development.
+        // Reset previous Leaflet binding on the same DOM node before creating a new map.
+        if ((container as any)._leaflet_id) {
+          (container as any)._leaflet_id = undefined;
+          container.innerHTML = "";
+        }
+
         // Initialize map
-        map.current = LeafletLib.map(mapContainer.current, {
+        map.current = LeafletLib.map(container, {
           preferCanvas: true,
           attributionControl: true,
           zoomControl: true,
@@ -61,7 +79,6 @@ export default function AdvancedSriLankaMap({ organizations = [] }: AdvancedSriL
         ).addTo(map.current);
 
         // Fix Leaflet marker icons
-        delete (LeafletLib.Icon.Default.prototype as any)._getIconUrl;
         LeafletLib.Icon.Default.mergeOptions({
           iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
           iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
@@ -95,38 +112,51 @@ export default function AdvancedSriLankaMap({ organizations = [] }: AdvancedSriL
         setHospitalCount(hospitalLocations.length);
         setTotalBeds(beds);
 
-        setIsLoading(false);
+        setMapError(null);
       } catch (error) {
         console.error("Map initialization error:", error);
-        setIsLoading(false);
+        setMapError("Map failed to load. Please refresh the page.");
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     initMap();
 
     return () => {
+      isCancelled = true;
       if (map.current) {
+        map.current.off();
         map.current.remove();
         map.current = null;
       }
     };
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-700 rounded-xl flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-white mx-auto mb-3"></div>
-          <p className="text-sm font-medium">Loading Sri Lanka Map...</p>
-          <p className="text-xs text-blue-100 mt-1">Initializing 9 hospital locations</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full h-full rounded-xl overflow-hidden shadow-2xl relative">
       <div ref={mapContainer} style={{ height: "100%", width: "100%" }} />
+
+      {isLoading && (
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center z-50">
+          <div className="text-white text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-white mx-auto mb-3"></div>
+            <p className="text-sm font-medium">Loading Sri Lanka Map...</p>
+            <p className="text-xs text-blue-100 mt-1">Initializing 9 hospital locations</p>
+          </div>
+        </div>
+      )}
+
+      {mapError && !isLoading && (
+        <div className="absolute inset-0 bg-red-50/95 flex items-center justify-center z-50">
+          <div className="text-center px-4">
+            <p className="text-sm font-semibold text-red-700">{mapError}</p>
+            <p className="text-xs text-red-600 mt-1">Check network access to OpenStreetMap tiles.</p>
+          </div>
+        </div>
+      )}
 
       {/* Map Legend Overlay */}
       <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-40 max-w-xs pointer-events-auto hover:shadow-xl transition-shadow cursor-default">
