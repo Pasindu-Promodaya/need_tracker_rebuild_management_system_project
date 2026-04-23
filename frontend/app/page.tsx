@@ -196,7 +196,7 @@ export default function Dashboard() {
             <div className="relative w-full animate-fade-in-down">
               <div className="relative w-full">
                 {/* Main map container */}
-                <div className="relative w-full bg-white bg-opacity-15 backdrop-blur-xl rounded-3xl border border-white border-opacity-40 overflow-hidden shadow-2xl h-[550px] hover:border-opacity-60 transition-all duration-300 hover:shadow-blue-500/40 hover:shadow-2xl">
+                <div className="relative w-full bg-white bg-opacity-15 backdrop-blur-xl rounded-3xl border border-white border-opacity-40 overflow-hidden shadow-2xl h-[620px] lg:h-[600px] hover:border-opacity-60 transition-all duration-300 hover:shadow-blue-500/40 hover:shadow-2xl">
                   <AdvancedSriLankaMap organizations={organizations} />
                 </div>
               </div>
