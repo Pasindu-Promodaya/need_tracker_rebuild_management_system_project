@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Organization, NeedItem, getOrganizations, getNeeds } from "@/lib/api";
 import StatsCard from "@/components/StatsCard";
@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const footerRef = useRef<HTMLElement>(null);
 
   const fetchData = async () => {
     try {
@@ -96,6 +97,16 @@ export default function Dashboard() {
       )
     : 0;
   const totalCritical = criticalNeeds.length;
+
+  const handleFooterMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    const footerEl = footerRef.current;
+    if (!footerEl) return;
+    const rect = footerEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    footerEl.style.setProperty("--mx", `${x}px`);
+    footerEl.style.setProperty("--my", `${y}px`);
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-50">
@@ -206,7 +217,15 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+          <div className="absolute -top-20 -left-12 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
+          <div className="absolute top-40 -right-16 h-80 w-80 rounded-full bg-indigo-200/25 blur-3xl" />
+          <div className="absolute -bottom-20 left-1/3 h-64 w-64 rounded-full bg-sky-200/25 blur-3xl" />
+        </div>
+        <div className="absolute inset-0 -z-10 rounded-3xl border border-blue-100/80 bg-linear-to-b from-white/95 via-blue-50/70 to-indigo-50/60 shadow-[0_24px_60px_-40px_rgba(37,99,235,0.45)] backdrop-blur-sm" />
+
+        <div className="relative px-1 sm:px-2">
         {/* Stats Grid */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Overview</h2>
@@ -360,7 +379,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center hover:shadow-md transition-shadow">
+              <div className="bg-white/85 rounded-xl shadow-sm border border-blue-100 p-12 text-center hover:shadow-lg hover:border-blue-200 backdrop-blur-sm transition-all">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                   <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -401,7 +420,7 @@ export default function Dashboard() {
           <div className="mt-16 mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Admin Actions</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Link href="/organizations" className="group relative overflow-hidden rounded-xl bg-white border border-gray-200 p-6 hover:shadow-lg transition-all">
+              <Link href="/organizations" className="group relative overflow-hidden rounded-xl bg-white/85 border border-blue-100 p-6 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 hover:border-blue-200 transition-all duration-300">
                 <div className="absolute inset-0 bg-linear-to-br from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 mb-4 group-hover:bg-blue-200 transition-colors">
@@ -414,7 +433,7 @@ export default function Dashboard() {
                 </div>
               </Link>
 
-              <Link href="/needs" className="group relative overflow-hidden rounded-xl bg-white border border-gray-200 p-6 hover:shadow-lg transition-all">
+              <Link href="/needs" className="group relative overflow-hidden rounded-xl bg-white/85 border border-emerald-100 p-6 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 hover:border-emerald-200 transition-all duration-300">
                 <div className="absolute inset-0 bg-linear-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-green-100 mb-4 group-hover:bg-green-200 transition-colors">
@@ -427,7 +446,7 @@ export default function Dashboard() {
                 </div>
               </Link>
 
-              <Link href="/documents" className="group relative overflow-hidden rounded-xl bg-white border border-gray-200 p-6 hover:shadow-lg transition-all">
+              <Link href="/documents" className="group relative overflow-hidden rounded-xl bg-white/85 border border-purple-100 p-6 backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 hover:border-purple-200 transition-all duration-300">
                 <div className="absolute inset-0 bg-linear-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div className="relative">
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-purple-100 mb-4 group-hover:bg-purple-200 transition-colors">
@@ -452,7 +471,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Find Needs Card */}
-            <Link href="/needs" className="group bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all hover:border-blue-300">
+            <Link href="/needs" className="group bg-white/85 rounded-xl border border-blue-100 p-8 text-center backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-blue-300">
               <div className="flex justify-center mb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 group-hover:bg-blue-200 transition-colors">
                   <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,7 +484,7 @@ export default function Dashboard() {
             </Link>
 
             {/* Register Organization Card */}
-            <Link href="/login?tab=org-admin" className="group bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all hover:border-purple-300">
+            <Link href="/login?tab=org-admin" className="group bg-white/85 rounded-xl border border-purple-100 p-8 text-center backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-purple-300">
               <div className="flex justify-center mb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
                   <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,7 +497,7 @@ export default function Dashboard() {
             </Link>
 
             {/* Become a Donor Card */}
-            <Link href="/login?tab=register" className="group bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all hover:border-red-300">
+            <Link href="/login?tab=register" className="group bg-white/85 rounded-xl border border-red-100 p-8 text-center backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-red-300">
               <div className="flex justify-center mb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 group-hover:bg-red-200 transition-colors">
                   <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">
@@ -491,7 +510,7 @@ export default function Dashboard() {
             </Link>
 
             {/* View Impact Card */}
-            <Link href="/needs" className="group bg-white rounded-xl border border-gray-200 p-8 text-center hover:shadow-lg transition-all hover:border-amber-300">
+            <Link href="/needs" className="group bg-white/85 rounded-xl border border-amber-100 p-8 text-center backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-amber-300">
               <div className="flex justify-center mb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 group-hover:bg-amber-200 transition-colors">
                   <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -504,37 +523,42 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+        </div>
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-20">
+      <footer
+        ref={footerRef}
+        onMouseMove={handleFooterMouseMove}
+        className="interactive-surface bg-linear-to-r from-slate-950 via-blue-950 to-indigo-950 border-t border-blue-900/60 mt-20"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Left - Logo and Branding */}
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white font-bold">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/90 text-white font-bold shadow-sm shadow-blue-500/40">
                 ℜ
               </span>
-              <span className="font-semibold text-gray-900">NeedTracker - Sri Lanka</span>
+              <span className="font-semibold text-blue-50">NeedTracker - Sri Lanka</span>
             </div>
 
             {/* Center - Copyright */}
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-blue-100/80">
               © 2025 NeedTracker. Connecting hospitals with donors.
             </p>
 
             {/* Right - Links */}
             <div className="flex items-center gap-6 text-sm">
-              <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
                 About
               </Link>
-              <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
                 Privacy
               </Link>
-              <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
                 Terms
               </Link>
-              <Link href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
                 Contact
               </Link>
             </div>
