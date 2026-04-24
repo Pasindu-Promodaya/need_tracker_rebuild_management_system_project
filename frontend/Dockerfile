@@ -10,7 +10,7 @@ COPY package*.json ./
 RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retries 5 && \
-    npm ci || npm ci || npm ci
+    npm ci --legacy-peer-deps || npm ci --legacy-peer-deps || npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -26,18 +26,12 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install production dependencies only
-COPY package*.json ./
-RUN npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-retries 5 && \
-    npm ci --only=production || npm ci --only=production || npm ci --only=production
-
 # Copy built app from builder
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.env.local ./.env.local
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
 
 # Expose port
 EXPOSE 3000
