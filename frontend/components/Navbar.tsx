@@ -123,7 +123,6 @@ export default function Navbar() {
   const navLinks = isAdmin
     ? [
         { href: "/", label: "Dashboard" },
-        { href: "/profile", label: "Profile" },
         { href: "/organizations", label: "Organizations" },
         { href: "/needs", label: "All Needs" },
         ...(user?.role === "ADMIN" ? [{ href: "/admin", label: "Donations" }] : []),
@@ -139,7 +138,6 @@ export default function Navbar() {
       ]
     : [
         { href: "/", label: "Dashboard" },
-        { href: "/profile", label: "Profile" },
         { href: "/needs", label: "Current Needs" },
       ];
 
