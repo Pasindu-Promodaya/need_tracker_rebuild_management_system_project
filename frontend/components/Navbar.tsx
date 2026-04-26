@@ -74,8 +74,10 @@ export default function Navbar() {
       const updated = await updateCurrentUser(profileForm);
       setUser(updated);
       setProfileSuccess("Profile updated successfully.");
-    } catch (err: any) {
-      setProfileError(err.message || "Failed to update profile.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to update profile.",
+      );
     } finally {
       setSaving(false);
     }
@@ -94,8 +96,10 @@ export default function Navbar() {
         new_password2: "",
       });
       setProfileSuccess("Password changed successfully.");
-    } catch (err: any) {
-      setProfileError(err.message || "Failed to change password.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to change password.",
+      );
     } finally {
       setSaving(false);
     }
@@ -121,6 +125,7 @@ export default function Navbar() {
         { href: "/", label: "Dashboard" },
         { href: "/organizations", label: "Organizations" },
         { href: "/needs", label: "All Needs" },
+        ...(user?.role === "ADMIN" ? [{ href: "/admin", label: "Donations" }] : []),
         ...(user?.role === "ADMIN"
           ? [{ href: "/admin/approvals", label: "Approvals" }]
           : []),

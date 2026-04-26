@@ -32,8 +32,8 @@ export default function AdminPage() {
         setError("");
         const data = await getDonations();
         setDonations(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch donations");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to fetch donations");
         console.error("Error fetching donations:", err);
       } finally {
         setIsLoading(false);
@@ -68,8 +68,8 @@ export default function AdminPage() {
         const data = await response.json();
         setError(data.status || "Failed to confirm donation");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to confirm donation");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to confirm donation");
     } finally {
       setConfirming(null);
     }
@@ -100,8 +100,8 @@ export default function AdminPage() {
         const data = await response.json();
         setError(data.status || "Failed to cancel donation");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to cancel donation");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to cancel donation");
     } finally {
       setCancelling(null);
     }
