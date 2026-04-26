@@ -510,7 +510,7 @@ export default function Dashboard() {
             </Link>
 
             {/* View Impact Card */}
-            <Link href="/needs" className="group bg-white/85 rounded-xl border border-amber-100 p-8 text-center backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-amber-300">
+            <Link href="/impact" className="group bg-white/85 rounded-xl border border-amber-100 p-8 text-center backdrop-blur-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-amber-300">
               <div className="flex justify-center mb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 group-hover:bg-amber-200 transition-colors">
                   <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
