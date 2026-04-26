@@ -164,16 +164,6 @@ export default function Dashboard() {
                     </Link>
                   </>
                 )}
-                {user?.role === "ORG_ADMIN" && (
-                  <>
-                    <Link href="/admin/donations" className="group relative px-8 py-4 bg-white text-blue-600 font-bold rounded-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg">
-                      <span className="relative z-10">Manage Donations</span>
-                    </Link>
-                    <Link href="/needs" className="group px-8 py-4 bg-white bg-opacity-20 text-white font-bold rounded-xl hover:bg-opacity-30 transition-all duration-300 border-2 border-white border-opacity-40 hover:border-opacity-60 transform hover:scale-105 active:scale-95 backdrop-blur-sm">
-                      View Needs
-                    </Link>
-                  </>
-                )}
               </div>
 
               {/* Stats Row */}
