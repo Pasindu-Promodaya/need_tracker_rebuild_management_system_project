@@ -123,6 +123,7 @@ export default function Navbar() {
   const navLinks = isAdmin
     ? [
         { href: "/", label: "Dashboard" },
+        { href: "/profile", label: "Profile" },
         { href: "/organizations", label: "Organizations" },
         { href: "/needs", label: "All Needs" },
         ...(user?.role === "ADMIN" ? [{ href: "/admin", label: "Donations" }] : []),
@@ -138,6 +139,7 @@ export default function Navbar() {
       ]
     : [
         { href: "/", label: "Dashboard" },
+        { href: "/profile", label: "Profile" },
         { href: "/needs", label: "Current Needs" },
       ];
 
@@ -256,8 +258,9 @@ export default function Navbar() {
                   {/* Avatar button */}
                   <div className="relative" ref={panelRef}>
                     <button
-                      onClick={() => setShowProfile((v) => !v)}
+                      onClick={() => router.push("/profile")}
                       className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold hover:bg-white/30 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      title="View Profile"
                     >
                       {user.username.charAt(0).toUpperCase()}
                     </button>
