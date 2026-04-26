@@ -549,16 +549,16 @@ export default function Dashboard() {
 
             {/* Right - Links */}
             <div className="flex items-center gap-6 text-sm">
-              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
+              <Link href="/about" className="text-blue-100/80 hover:text-white transition-colors">
                 About
               </Link>
-              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
+              <Link href="/privacy" className="text-blue-100/80 hover:text-white transition-colors">
                 Privacy
               </Link>
-              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
+              <Link href="/terms" className="text-blue-100/80 hover:text-white transition-colors">
                 Terms
               </Link>
-              <Link href="#" className="text-blue-100/80 hover:text-white transition-colors">
+              <Link href="/contact" className="text-blue-100/80 hover:text-white transition-colors">
                 Contact
               </Link>
             </div>
