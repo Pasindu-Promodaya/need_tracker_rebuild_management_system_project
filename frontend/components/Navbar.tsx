@@ -32,6 +32,7 @@ export default function Navbar() {
   const [saving, setSaving] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   // Sync form when user loads or panel opens
   useEffect(() => {
@@ -73,8 +74,10 @@ export default function Navbar() {
       const updated = await updateCurrentUser(profileForm);
       setUser(updated);
       setProfileSuccess("Profile updated successfully.");
-    } catch (err: any) {
-      setProfileError(err.message || "Failed to update profile.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to update profile.",
+      );
     } finally {
       setSaving(false);
     }
@@ -93,8 +96,10 @@ export default function Navbar() {
         new_password2: "",
       });
       setProfileSuccess("Password changed successfully.");
-    } catch (err: any) {
-      setProfileError(err.message || "Failed to change password.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to change password.",
+      );
     } finally {
       setSaving(false);
     }
@@ -120,6 +125,7 @@ export default function Navbar() {
         { href: "/", label: "Dashboard" },
         { href: "/organizations", label: "Organizations" },
         { href: "/needs", label: "All Needs" },
+        ...(user?.role === "ADMIN" ? [{ href: "/admin", label: "Donations" }] : []),
         ...(user?.role === "ADMIN"
           ? [{ href: "/admin/approvals", label: "Approvals" }]
           : []),
@@ -135,8 +141,22 @@ export default function Navbar() {
         { href: "/needs", label: "Current Needs" },
       ];
 
+  const handleNavMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    const navEl = navRef.current;
+    if (!navEl) return;
+    const rect = navEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    navEl.style.setProperty("--mx", `${x}px`);
+    navEl.style.setProperty("--my", `${y}px`);
+  };
+
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav
+      ref={navRef}
+      onMouseMove={handleNavMouseMove}
+      className="interactive-surface bg-linear-to-r from-slate-950 via-blue-950 to-indigo-950 shadow-lg border-b border-blue-900/60"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center w-full justify-between">
@@ -144,7 +164,7 @@ export default function Navbar() {
               {/* Logo */}
               <div className="flex-shrink-0 flex items-center mr-8">
                 <Link href="/" className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-500/90 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/40">
                     <svg
                       className="w-5 h-5 text-white"
                       fill="none"
@@ -159,7 +179,7 @@ export default function Navbar() {
                       />
                     </svg>
                   </div>
-                  <span className="font-bold text-xl text-gray-900">
+                  <span className="font-bold text-xl text-white tracking-tight">
                     NeedTracker
                   </span>
                 </Link>
@@ -173,8 +193,8 @@ export default function Navbar() {
                     href={link.href}
                     className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       pathname === link.href
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        ? "bg-white/15 text-blue-100"
+                        : "text-blue-100/80 hover:text-white hover:bg-white/10"
                     }`}
                   >
                     {link.label}
@@ -189,7 +209,7 @@ export default function Navbar() {
               >
                 <div className="relative">
                   <Search
-                    className="absolute left-3 top-2.5 text-gray-400"
+                    className="absolute left-3 top-2.5 text-blue-100/70"
                     size={18}
                   />
                   <input
@@ -197,7 +217,7 @@ export default function Navbar() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search..."
-                    className="pl-10 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent w-32"
+                    className="pl-10 pr-3 py-1.5 text-sm border border-blue-300/30 rounded-lg focus:ring-1 focus:ring-blue-300 focus:border-blue-300/50 w-32 bg-white/10 text-white placeholder:text-blue-100/70"
                   />
                 </div>
               </form>
@@ -209,35 +229,36 @@ export default function Navbar() {
                 <div className="flex items-center gap-2">
                   <Link
                     href="/login"
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
+                    className="text-sm font-medium text-blue-100 hover:text-white px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/login?tab=register"
-                    className="text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md transition-colors"
+                    className="text-sm font-medium text-blue-900 bg-blue-100 hover:bg-white px-4 py-2 rounded-md transition-colors"
                   >
                     Register as Donor
                   </Link>
                 </div>
               ) : user ? (
                 <>
-                  <span className="hidden md:inline-flex text-sm font-medium text-gray-700 items-center">
-                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                  <span className="hidden md:inline-flex text-sm font-medium text-blue-100 items-center">
+                    <span className="inline-flex items-center rounded-md bg-white/15 px-2 py-1 text-xs font-medium text-blue-100 ring-1 ring-inset ring-white/20">
                       {user.role}
                     </span>
                   </span>
                   <button
                     onClick={logout}
-                    className="text-sm text-gray-500 hover:text-gray-900 font-medium"
+                    className="text-sm text-blue-100/80 hover:text-white font-medium"
                   >
                     Sign out
                   </button>
                   {/* Avatar button */}
                   <div className="relative" ref={panelRef}>
                     <button
-                      onClick={() => setShowProfile((v) => !v)}
-                      className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      onClick={() => router.push("/profile")}
+                      className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold hover:bg-white/30 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      title="View Profile"
                     >
                       {user.username.charAt(0).toUpperCase()}
                     </button>

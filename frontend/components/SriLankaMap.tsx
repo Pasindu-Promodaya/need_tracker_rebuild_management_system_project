@@ -8,7 +8,7 @@ interface SriLankaMapProps {
 }
 
 export default function SriLankaMap({ organizations = [] }: SriLankaMapProps) {
-  const [hoveredHospital, setHoveredHospital] = useState<string | null>(null);
+  const [hoveredHospital, setHoveredHospital] = useState<number | null>(null);
 
   // Simplified hospital locations on Sri Lanka map (approximate coordinates)
   const hospitalLocations = [
@@ -73,7 +73,7 @@ export default function SriLankaMap({ organizations = [] }: SriLankaMapProps) {
               r={hoveredHospital === hospital.id ? 3 : 2.2}
               fill={hoveredHospital === hospital.id ? "#22c55e" : "#10b981"}
               className="cursor-pointer transition-all duration-300 hover:brightness-125"
-              onMouseEnter={() => setHoveredHospital(hospital.id.toString())}
+              onMouseEnter={() => setHoveredHospital(hospital.id)}
               onMouseLeave={() => setHoveredHospital(null)}
             />
 
@@ -162,10 +162,10 @@ export default function SriLankaMap({ organizations = [] }: SriLankaMapProps) {
       {hoveredHospital && (
         <div className="absolute bottom-4 left-4 right-4 bg-white rounded-lg p-3 shadow-xl z-20">
           <div className="text-sm font-semibold text-gray-900">
-            {hospitalLocations.find((h) => h.id.toString() === hoveredHospital)?.name}
+            {hospitalLocations.find((h) => h.id === hoveredHospital)?.name}
           </div>
           <div className="text-xs text-gray-600 mt-1">
-            📍 {hospitalLocations.find((h) => h.id.toString() === hoveredHospital)?.district}
+            📍 {hospitalLocations.find((h) => h.id === hoveredHospital)?.district}
           </div>
         </div>
       )}
