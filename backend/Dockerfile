@@ -34,6 +34,9 @@ RUN pip install --upgrade pip && \
 # Copy project files
 COPY . .
 
+# Ensure entrypoint script is executable (Windows doesn't preserve Unix permissions)
+RUN chmod +x /app/entrypoint.sh
+
 # Expose port
 EXPOSE 8000
 
