@@ -43,6 +43,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+# Exception: frontend/lib/ contains Next.js source code (not a Python artifact)
+!frontend/lib/
 parts/
 sdist/
 var/
