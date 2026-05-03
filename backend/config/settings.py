@@ -30,6 +30,13 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
+# Trust Traefik's forwarded headers (prevents HTTP→HTTPS redirect loop)
+# Traefik terminates SSL and forwards requests as HTTP internally,
+# so Django must be told the original request was HTTPS.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = False  # Traefik handles SSL, not Django
+
 # Google Gemini Configuration
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
@@ -72,8 +79,9 @@ CORS_ALLOWED_ORIGINS = config(
 
 CORS_ALLOW_CREDENTIALS = True
 
-# For development, you can allow all origins (NOT FOR PRODUCTION!)
-# CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
+# Allow all origins in dev (Traefik.me domain changes per deployment)
+# For production, set CORS_ALLOWED_ORIGINS explicitly instead
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'config.urls'  # Main URL configuration
 
