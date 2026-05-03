@@ -48,7 +48,7 @@ export default function AdminPage() {
     try {
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `http://localhost:8000/api/donations/${donationId}/confirm/`,
+        `/api/donations/${donationId}/confirm/`,
         {
           method: "POST",
           headers: {
@@ -80,7 +80,7 @@ export default function AdminPage() {
     try {
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `http://localhost:8000/api/donations/${donationId}/cancel/`,
+        `/api/donations/${donationId}/cancel/`,
         {
           method: "POST",
           headers: {

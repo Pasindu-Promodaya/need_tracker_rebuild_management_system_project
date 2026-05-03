@@ -1,7 +1,7 @@
 // API Configuration and Helper Functions
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+  process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Types based on Django models
 export interface User {
