@@ -1,7 +1,7 @@
 // API Configuration and Helper Functions
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "/api";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 // Types based on Django models
 export interface User {
@@ -179,7 +179,9 @@ async function fetchAPI<T>(
     );
   }
 
-  let response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const fullUrl = `${API_BASE_URL}${endpoint}`;
+  console.log(`[API] Fetching: ${fullUrl}`);
+  let response = await fetch(fullUrl, {
     ...options,
     headers,
   });
@@ -390,7 +392,7 @@ export const getNeeds = async (
   if (priority) params.append("priority", priority);
   if (excludeFulfilled) params.append("exclude_fulfilled", "true");
   const query = params.toString() ? `?${params.toString()}` : "";
-  const response = await fetchAPI<any>(`/needs/${query}`);
+  const response = await fetchAPI<any>(query ? `/needs/${query}` : "/needs/");
   return (response.results || response) as NeedItem[];
 };
 export const getNeed = (id: number) => fetchAPI<NeedItem>(`/needs/${id}/`);

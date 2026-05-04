@@ -23,9 +23,7 @@ export default function DonationManagementPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (user?.role === "ADMIN") {
-        router.push("/admin");
-      } else if (user?.role !== "ORG_ADMIN") {
+      if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
         router.push("/");
       }
     }
@@ -33,48 +31,57 @@ export default function DonationManagementPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || user.role !== "ORG_ADMIN") return;
+      if (!user) return;
+      if (user.role !== "ORG_ADMIN" && user.role !== "ADMIN") return;
 
       try {
         setIsLoading(true);
         setError("");
 
-        // Get organization
-        const orgs = await getOrganizations();
-        if (orgs.length > 0) {
-          setOrganization(orgs[0]);
-
-          // Build needs map for quick lookup
-          const nMap = new Map<number, any>();
-          orgs[0].sections?.forEach((section: any) => {
-            section.needs?.forEach((need: any) => {
-              nMap.set(need.id, need);
-            });
-          });
-          setNeedsMap(nMap);
-        }
-
         // Get all donations
         const allDonations = await getDonations();
 
-        // Filter donations for this organization's needs
-        if (orgs.length > 0) {
-          const orgId = orgs[0].id;
-          const orgNeedIds = new Set<number>();
-
-          // Collect all need IDs for this organization
-          orgs[0].sections?.forEach((section: any) => {
-            section.needs?.forEach((need: any) => {
-              orgNeedIds.add(need.id);
+        if (user.role === "ADMIN") {
+          // Admins see everything
+          setDonations(allDonations);
+          
+          // Optionally get some extra info for admins
+          const orgs = await getOrganizations();
+          const nMap = new Map<number, any>();
+          orgs.forEach((org: any) => {
+            org.sections?.forEach((section: any) => {
+              section.needs?.forEach((need: any) => {
+                nMap.set(need.id, need);
+              });
             });
           });
+          setNeedsMap(nMap);
+        } else {
+          // ORG_ADMIN logic
+          const orgs = await getOrganizations();
+          if (orgs.length > 0) {
+            setOrganization(orgs[0]);
 
-          // Filter donations to only show those for this organization's needs
-          const filteredDonations = allDonations.filter((d) =>
-            orgNeedIds.has(d.need_item),
-          );
+            const nMap = new Map<number, any>();
+            orgs[0].sections?.forEach((section: any) => {
+              section.needs?.forEach((need: any) => {
+                nMap.set(need.id, need);
+              });
+            });
+            setNeedsMap(nMap);
 
-          setDonations(filteredDonations);
+            const orgNeedIds = new Set<number>();
+            orgs[0].sections?.forEach((section: any) => {
+              section.needs?.forEach((need: any) => {
+                orgNeedIds.add(need.id);
+              });
+            });
+
+            const filteredDonations = allDonations.filter((d) =>
+              orgNeedIds.has(d.need_item),
+            );
+            setDonations(filteredDonations);
+          }
         }
       } catch (err: any) {
         setError(err.message || "Failed to fetch donations");
