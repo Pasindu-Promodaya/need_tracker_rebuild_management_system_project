@@ -35,11 +35,16 @@ export default function ImpactPage() {
       setError(null);
       setWarning(null);
 
-      const [orgResult, needsResult, donationResult] = await Promise.allSettled([
+      // Check if user is authenticated for donation data
+      const isAuthenticated = !!localStorage.getItem("accessToken");
+
+      const promises: [Promise<any>, Promise<any>, Promise<any> | null] = [
         getOrganizations(),
         getNeeds(),
-        getDonations(),
-      ]);
+        isAuthenticated ? getDonations() : null
+      ];
+
+      const [orgResult, needsResult, donationResult] = await Promise.allSettled(promises);
 
       const organizationsLoaded = orgResult.status === "fulfilled";
       const needsLoaded = needsResult.status === "fulfilled";
@@ -56,11 +61,15 @@ export default function ImpactPage() {
         setNeeds([]);
       }
 
-      if (donationResult.status === "fulfilled") {
-        setDonations(donationResult.value);
+      if (donationResult && donationResult.status === "fulfilled") {
+        setDonations(donationResult.value || []);
       } else {
         setDonations([]);
-        setWarning("Donation history could not be loaded for this account. Showing impact based on available organization and needs data.");
+        if (!isAuthenticated) {
+          setWarning("Sign in to see your personalized donation history. Showing global impact data.");
+        } else if (donationResult && donationResult.status === "rejected") {
+          setWarning("Donation history could not be loaded for this account. Showing impact based on available data.");
+        }
       }
 
       if (!organizationsLoaded && !needsLoaded) {
