@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (currentUser.role === 'ADMIN') {
         router.push('/admin');
       } else if (currentUser.role === 'ORG_ADMIN') {
-        router.push('/organizations');
+        router.push('/org-admin');
       } else {
         router.push('/needs');
       }
