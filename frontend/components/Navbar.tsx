@@ -80,11 +80,11 @@ export default function Navbar() {
 
               {/* Navigation Links */}
               <div className="hidden md:flex items-center space-x-8">
-                {user?.role === "ADMIN" ? (
+                {(user?.role === "ADMIN" || user?.role === "ORG_ADMIN") ? (
                   <>
                     <Link
-                      href="/admin"
-                      className={`text-sm font-semibold transition-colors ${pathname === "/admin" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                      href={user.role === "ADMIN" ? "/admin" : "/org-admin"}
+                      className={`text-sm font-semibold transition-colors ${pathname === "/admin" || pathname === "/org-admin" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
                     >
                       Dashboard
                     </Link>
@@ -101,17 +101,25 @@ export default function Navbar() {
                       All Needs
                     </Link>
                     <Link
+                      href="/documents"
+                      className={`text-sm font-semibold transition-colors ${pathname === "/documents" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                    >
+                      Documents
+                    </Link>
+                    <Link
                       href="/admin/donations"
                       className={`text-sm font-semibold transition-colors ${pathname === "/admin/donations" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
                     >
                       Donations
                     </Link>
-                    <Link
-                      href="/admin/approvals"
-                      className={`text-sm font-semibold transition-colors ${pathname === "/admin/approvals" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
-                    >
-                      Approvals
-                    </Link>
+                    {user.role === "ADMIN" && (
+                      <Link
+                        href="/admin/approvals"
+                        className={`text-sm font-semibold transition-colors ${pathname === "/admin/approvals" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                      >
+                        Approvals
+                      </Link>
+                    )}
                   </>
                 ) : (
                   <>
@@ -180,12 +188,14 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center gap-4 relative" ref={panelRef}>
-                  {user.role === "ADMIN" && (
+                  {(user.role === "ADMIN" || user.role === "ORG_ADMIN") && (
                     <div className="hidden sm:flex flex-col items-end mr-1">
                       <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                        Admin
+                        {user.role === "ADMIN" ? "Admin" : "Org Admin"}
                       </span>
-                      <span className="text-[9px] text-slate-400 font-medium">System Access</span>
+                      <span className="text-[9px] text-slate-400 font-medium">
+                        {user.role === "ADMIN" ? "System Access" : "Management"}
+                      </span>
                     </div>
                   )}
                   <button

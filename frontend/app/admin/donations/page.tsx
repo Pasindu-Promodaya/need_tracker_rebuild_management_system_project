@@ -99,7 +99,7 @@ export default function DonationManagementPage() {
     try {
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `/api/donations/${donationId}/confirm/`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/confirm/`,
         {
           method: "POST",
           headers: {
@@ -131,7 +131,7 @@ export default function DonationManagementPage() {
     try {
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `/api/donations/${donationId}/cancel/`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/cancel/`,
         {
           method: "POST",
           headers: {
@@ -206,7 +206,7 @@ export default function DonationManagementPage() {
     );
   }
 
-  if (user?.role !== "ORG_ADMIN") {
+  if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">
