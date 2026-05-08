@@ -30,6 +30,13 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
+# Trust Traefik's forwarded headers (prevents HTTP→HTTPS redirect loop)
+# Traefik terminates SSL and forwards requests as HTTP internally,
+# so Django must be told the original request was HTTPS.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+SECURE_SSL_REDIRECT = False  # Traefik handles SSL, not Django
+
 # Google Gemini Configuration
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
@@ -72,10 +79,16 @@ CORS_ALLOWED_ORIGINS = config(
 
 CORS_ALLOW_CREDENTIALS = True
 
-# For development, you can allow all origins (NOT FOR PRODUCTION!)
-# CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
+# Allow all origins in dev (Traefik.me domain changes per deployment)
+# For production, set CORS_ALLOWED_ORIGINS explicitly instead
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'config.urls'  # Main URL configuration
+
+# Disable trailing-slash redirect (api.ts already uses trailing slashes everywhere)
+# Django's default APPEND_SLASH=True generates a cached 301 which causes redirect loops
+# when the frontend proxy rewrites /api/x → backend:8000/api/x → 301 → /api/x/
+APPEND_SLASH = False
 
 TEMPLATES = [
     {
@@ -101,8 +114,12 @@ WSGI_APPLICATION = 'config.wsgi.application'  # WSGI application path
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='rebuild_db'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='admin1234'),
+        'HOST': config('DB_HOST', default='db'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 

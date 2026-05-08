@@ -16,7 +16,7 @@ RUN npm config set fetch-retry-mintimeout 20000 && \
 COPY . .
 
 # Create .env.local
-RUN echo "NEXT_PUBLIC_API_URL=http://localhost:8000/api" > .env.local
+RUN echo "NEXT_PUBLIC_API_URL=/api" > .env.local
 
 # Build the Next.js app
 RUN npm run build

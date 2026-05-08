@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { updateCurrentUser } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { User, Mail, Phone, Lock, UserCircle, Save } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -51,6 +52,7 @@ export default function ProfilePage() {
       const updated = await updateCurrentUser(profileForm);
       setUser(updated);
       setMessage("Profile updated successfully.");
+      setTimeout(() => setMessage(null), 3000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update profile.");
     } finally {
@@ -71,6 +73,7 @@ export default function ProfilePage() {
         new_password2: "",
       });
       setMessage("Password changed successfully.");
+      setTimeout(() => setMessage(null), 3000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to change password.");
     } finally {
@@ -86,102 +89,100 @@ export default function ProfilePage() {
     );
   }
 
-  const roleLabelMap: Record<string, string> = {
-    ADMIN: "Administrator",
-    ORG_ADMIN: "Organization Admin",
-    DONOR: "Donor",
-  };
-
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-blue-50 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="rounded-3xl bg-linear-to-r from-blue-700 via-indigo-700 to-slate-900 px-6 py-8 text-white shadow-xl sm:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+    <div className="min-h-screen bg-slate-50 pb-20">
+      {/* Blue Header Section - Matches Image 2 */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white pt-16 pb-32">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-blue-100/80">
-                My Profile
-              </p>
-              <h1 className="mt-4 text-3xl font-bold sm:text-4xl">
-                {user.first_name && user.last_name
-                  ? `${user.first_name} ${user.last_name}`
-                  : user.username}
-              </h1>
-              <p className="mt-2 text-sm text-blue-100/80">
-                {roleLabelMap[user.role] || user.role} • View and update your account details from one place.
+              <div className="inline-block px-3 py-1 bg-white/10 rounded-lg text-[10px] font-bold tracking-widest uppercase mb-4">
+                User Profile
+              </div>
+              <h1 className="text-4xl font-black tracking-tight">{user.username}</h1>
+              <p className="text-blue-100 mt-2 text-sm max-w-xl">
+                Manage your personal information and account security settings. Current login session is active.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/" className="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
-                Back to Dashboard
-              </Link>
-            </div>
+            <Link href="/" className="bg-white text-blue-700 px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:bg-slate-50 transition-all">
+              Back to Home
+            </Link>
           </div>
         </div>
+      </div>
 
+      {/* Profile Content - Matches two-column layout in Image 2 */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20">
+        
         {message && (
-          <div className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            {message}
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+            <UserCircle size={20} className="text-emerald-500" />
+            <span className="text-sm font-semibold">{message}</span>
           </div>
         )}
 
         {error && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {error}
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+            <Lock size={20} className="text-rose-500" />
+            <span className="text-sm font-semibold">{error}</span>
           </div>
         )}
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Profile Details</h2>
-                <p className="mt-1 text-sm text-gray-500">Update the information shown on your account.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Profile Details Section */}
+          <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+                <User className="text-blue-600" size={24} />
               </div>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                {user.role}
-              </span>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Profile details</h2>
+                <p className="text-xs text-slate-500 font-medium">Your basic account information</p>
+              </div>
             </div>
 
-            <form onSubmit={handleProfileSave} className="mt-6 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={handleProfileSave} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">First Name</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">First Name</label>
                   <input
                     value={profileForm.first_name}
                     onChange={(e) => setProfileForm((p) => ({ ...p, first_name: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    placeholder="First name"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Last Name</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Last Name</label>
                   <input
                     value={profileForm.last_name}
                     onChange={(e) => setProfileForm((p) => ({ ...p, last_name: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    placeholder="Last name"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input
                     type="email"
                     value={profileForm.email}
                     onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    placeholder="Email address"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Phone Number</label>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input
                     value={profileForm.phone_number}
                     onChange={(e) => setProfileForm((p) => ({ ...p, phone_number: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    placeholder="Phone number"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
@@ -189,58 +190,67 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full bg-blue-600 text-white rounded-xl py-3 text-sm font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
               >
-                {saving ? "Saving..." : "Save Profile"}
+                <Save size={18} />
+                {saving ? "Saving changes..." : "Save details"}
               </button>
             </form>
-          </section>
+          </div>
 
-          <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900">Change Password</h2>
-            <p className="mt-1 text-sm text-gray-500">Keep your account secure with a strong password.</p>
-
-            <form onSubmit={handlePasswordSave} className="mt-6 space-y-4">
+          {/* Change Password Section */}
+          <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center">
+                <Lock className="text-rose-600" size={24} />
+              </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Current Password</label>
+                <h2 className="text-xl font-bold text-slate-900">Change password</h2>
+                <p className="text-xs text-slate-500 font-medium">Keep your account secure</p>
+              </div>
+            </div>
+
+            <form onSubmit={handlePasswordSave} className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Current password</label>
                 <input
                   type="password"
                   value={passwordForm.current_password}
                   onChange={(e) => setPasswordForm((p) => ({ ...p, current_password: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  placeholder="Current password"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                 />
               </div>
+
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">New Password</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">New password</label>
                 <input
                   type="password"
                   value={passwordForm.new_password}
                   onChange={(e) => setPasswordForm((p) => ({ ...p, new_password: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  placeholder="New password"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                 />
               </div>
+
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Confirm New Password</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Confirm new password</label>
                 <input
                   type="password"
                   value={passwordForm.new_password2}
                   onChange={(e) => setPasswordForm((p) => ({ ...p, new_password2: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  placeholder="Confirm new password"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full bg-slate-900 text-white rounded-xl py-3 text-sm font-bold hover:bg-slate-800 transition-all"
               >
-                {saving ? "Updating..." : "Change Password"}
+                {saving ? "Updating..." : "Update password"}
               </button>
             </form>
-          </section>
+          </div>
+
         </div>
       </div>
     </div>

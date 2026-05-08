@@ -78,9 +78,13 @@ export default function OrganizationsPage() {
   }, [user?.role]);
 
   useEffect(() => {
-    if (!authorized) return;
-    fetchOrganizations();
-    setLoading(false);
+    const loadData = async () => {
+      if (!authorized) return;
+      setLoading(true);
+      await fetchOrganizations();
+      setLoading(false);
+    };
+    loadData();
   }, [authorized, fetchOrganizations]);
 
   const findNeedById = (needId: number): NeedItem | null => {

@@ -34,6 +34,12 @@ RUN pip install --upgrade pip && \
 # Copy project files
 COPY . .
 
+# Fix Windows CRLF line endings and ensure script is executable
+RUN apt-get update && apt-get install -y --no-install-recommends dos2unix \
+    && dos2unix /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh \
+    && rm -rf /var/lib/apt/lists/*
+
 # Expose port
 EXPOSE 8000
 
@@ -41,5 +47,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/api/organizations/ || exit 1
 
-# Run the entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Run the entrypoint script via bash explicitly (bypasses execute permission issues)
+ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]

@@ -1,4 +1,3 @@
-
 services:
   # PostgreSQL Database
   db:
@@ -29,7 +28,7 @@ services:
     environment:
       DEBUG: "True"
       SECRET_KEY: "django-insecure-3z55ai11+0pf5gb5_fb8g9^69zpj6e*3fvttevtwt9-6+j_k^e"
-      ALLOWED_HOSTS: "localhost,127.0.0.1,backend,0.0.0.0"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,backend,0.0.0.0,*"
       # PostgreSQL settings matching settings.py variable names
       DB_NAME: rebuild_db
       DB_USER: postgres
@@ -41,7 +40,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
       - media_data:/app/media
     depends_on:
       db:
@@ -57,8 +55,8 @@ services:
       dockerfile: Dockerfile
     container_name: rebuild_frontend
     environment:
-      # Browser-accessible URL - must use localhost (not container name)
-      NEXT_PUBLIC_API_URL: "http://localhost:8000/api"
+      # Relative URL: browser calls /api/* on same host → Next.js rewrites to backend internally
+      NEXT_PUBLIC_API_URL: "/api"
     ports:
       - "3000:3000"
     depends_on:

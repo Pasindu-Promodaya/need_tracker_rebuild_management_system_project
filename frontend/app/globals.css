@@ -24,6 +24,19 @@ input[type="password"]::-ms-clear {
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
 
+  /* Slate color scale */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
   /* Blue color scale */
   --color-blue-50: #eff6ff;
   --color-blue-100: #dbeafe;
@@ -294,6 +307,39 @@ button:active {
 
 .animate-pulse-ring {
   animation: pulse-ring 2s infinite;
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(-50%) translateY(-10px); }
+  50% { transform: translateY(-50%) translateY(10px); }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 4s ease-in-out infinite;
+}
+
+/* Dot pattern background - High visibility for premium look */
+.bg-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.4) 1.5px, transparent 0);
+  background-size: 48px 48px;
+}
+
+.bg-dots-dark {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 0);
+  background-size: 48px 48px;
+}
+
+/* Glassmorphism utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-panel-dark {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Production polish: cursor-follow light effect for branded surfaces */

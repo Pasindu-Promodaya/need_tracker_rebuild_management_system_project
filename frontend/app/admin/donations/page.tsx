@@ -2,24 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Donation, getDonations } from "@/lib/api";
+import { Donation, getDonations, getOrganizations } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CheckCircle2, XCircle, Clock, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function DonationsPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<string>("PENDING");
   const [confirming, setConfirming] = useState<number | null>(null);
   const [cancelling, setCancelling] = useState<number | null>(null);
+  const [needsMap, setNeedsMap] = useState<Map<number, any>>(new Map());
+  const [organization, setOrganization] = useState<any>(null);
 
   useEffect(() => {
-    if (!authLoading && user?.role !== "ORG_ADMIN") {
-      router.push("/");
+    if (!authLoading) {
+      if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
+        router.push("/");
+      }
     }
   }, [user, authLoading, router]);
 
@@ -44,8 +48,68 @@ export default function DonationsPage() {
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    fetchDonations().finally(() => setIsLoading(false));
+    const fetchData = async () => {
+      if (!user) return;
+      if (user.role !== "ORG_ADMIN" && user.role !== "ADMIN") return;
+
+      try {
+        setIsLoading(true);
+        setError("");
+
+        // Get all donations
+        const allDonations = await getDonations();
+
+        if (user.role === "ADMIN") {
+          // Admins see everything
+          setDonations(allDonations);
+
+          // Optionally get some extra info for admins
+          const orgs = await getOrganizations();
+          const nMap = new Map<number, any>();
+          orgs.forEach((org: any) => {
+            org.sections?.forEach((section: any) => {
+              section.needs?.forEach((need: any) => {
+                nMap.set(need.id, need);
+              });
+            });
+          });
+          setNeedsMap(nMap);
+        } else {
+          // ORG_ADMIN logic
+          const orgs = await getOrganizations();
+          if (orgs.length > 0) {
+            setOrganization(orgs[0]);
+
+            const nMap = new Map<number, any>();
+            orgs[0].sections?.forEach((section: any) => {
+              section.needs?.forEach((need: any) => {
+                nMap.set(need.id, need);
+              });
+            });
+            setNeedsMap(nMap);
+
+            const orgNeedIds = new Set<number>();
+            orgs[0].sections?.forEach((section: any) => {
+              section.needs?.forEach((need: any) => {
+                orgNeedIds.add(need.id);
+              });
+            });
+
+            const filteredDonations = allDonations.filter((d) =>
+              orgNeedIds.has(d.need_item),
+            );
+            setDonations(filteredDonations);
+          }
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch donations");
+        console.error("Error fetching data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [user]);
 
   const handleConfirm = async (donationId: number) => {
@@ -53,7 +117,7 @@ export default function DonationsPage() {
     try {
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `http://localhost:8000/api/donations/${donationId}/confirm/`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/confirm/`,
         {
           method: "POST",
           headers: {
@@ -83,7 +147,7 @@ export default function DonationsPage() {
     try {
       const token = localStorage.getItem("accessToken");
       const response = await fetch(
-        `http://localhost:8000/api/donations/${donationId}/cancel/`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/cancel/`,
         {
           method: "POST",
           headers: {
@@ -183,7 +247,7 @@ export default function DonationsPage() {
     );
   }
 
-  if (user?.role !== "ORG_ADMIN") {
+  if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">
