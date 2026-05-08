@@ -125,7 +125,6 @@ export default function Navbar() {
         { href: "/", label: "Dashboard" },
         { href: "/organizations", label: "Organizations" },
         { href: "/needs", label: "All Needs" },
-        ...(user?.role === "ADMIN" ? [{ href: "/admin", label: "Donations" }] : []),
         ...(user?.role === "ADMIN"
           ? [{ href: "/admin/approvals", label: "Approvals" }]
           : []),
