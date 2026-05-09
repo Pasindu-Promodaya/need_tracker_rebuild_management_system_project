@@ -88,10 +88,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'config.urls'  # Main URL configuration
 
-# Disable trailing-slash redirect (api.ts already uses trailing slashes everywhere)
-# Django's default APPEND_SLASH=True generates a cached 301 which causes redirect loops
-# when the frontend proxy rewrites /api/x → backend:8000/api/x → 301 → /api/x/
-APPEND_SLASH = False
+# Enable trailing-slash redirect for compatibility with admin and core URLs
+# This allows /admin to redirect to /admin/ automatically
+APPEND_SLASH = True
 
 TEMPLATES = [
     {
