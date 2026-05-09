@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import {
   getAdminApprovals,
@@ -53,10 +53,6 @@ export default function ApprovalsPage() {
     userName: "",
   });
 
-  useEffect(() => {
-    loadAllApprovals();
-  }, []);
-
   const sortByNewest = (requests: ApprovalRequest[]): ApprovalRequest[] => {
     return [...requests].sort((a, b) => {
       const dateA = a.approval_decided_at || a.approval_requested_at || "";
@@ -65,7 +61,7 @@ export default function ApprovalsPage() {
     });
   };
 
-  const loadAllApprovals = async () => {
+  const loadAllApprovals = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -75,13 +71,18 @@ export default function ApprovalsPage() {
       ]);
       setPendingRequests(sortByNewest(pending));
       setApprovedRequests(sortByNewest(approved));
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       setError("Failed to load approval requests");
-      console.error(err);
+      console.error(error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadAllApprovals();
+  }, [loadAllApprovals]);
 
   const handleApprove = async (id: number) => {
     const request = pendingRequests.find((r) => r.id === id);

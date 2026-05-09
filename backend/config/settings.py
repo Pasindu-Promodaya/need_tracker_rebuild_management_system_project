@@ -58,6 +58,9 @@ INSTALLED_APPS = [
     'corsheaders',  # For handling CORS
 ]
 
+# Default auto field configuration
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 #Middleware stack
 MIDDLEWARE = [ 
     'django.middleware.security.SecurityMiddleware',
