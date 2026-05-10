@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Donation, getDonations, getOrganizations } from "@/lib/api";
+import {
+  Donation,
+  getDonations,
+  getOrganizations,
+  confirmDonation,
+  cancelDonation,
+} from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CheckCircle2, XCircle, Clock, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,6 +24,18 @@ export default function DonationsPage() {
   const [cancelling, setCancelling] = useState<number | null>(null);
   const [needsMap, setNeedsMap] = useState<Map<number, any>>(new Map());
   const [organization, setOrganization] = useState<any>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: "confirm" | "cancel" | null;
+    donationId: number | null;
+    donationDetails: any | null;
+  }>({
+    isOpen: false,
+    type: null,
+    donationId: null,
+    donationDetails: null,
+  });
+  const [viewDialog, setViewDialog] = useState<any>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -113,29 +131,31 @@ export default function DonationsPage() {
   }, [user]);
 
   const handleConfirm = async (donationId: number) => {
-    setConfirming(donationId);
-    try {
-      const token = localStorage.getItem("accessToken");
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/confirm/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    const donation = donations.find((d) => d.id === donationId);
+    setConfirmDialog({
+      isOpen: true,
+      type: "confirm",
+      donationId,
+      donationDetails: donation,
+    });
+  };
 
-      if (response.ok) {
-        await fetchDonations();
-      } else {
-        const data = await response.json();
-        setError(data.status || "Failed to confirm donation");
-      }
-    } catch (err: unknown) {
+  const handleConfirmApprove = async () => {
+    if (!confirmDialog.donationId) return;
+
+    setConfirming(confirmDialog.donationId);
+    try {
+      await confirmDonation(confirmDialog.donationId);
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        donationId: null,
+        donationDetails: null,
+      });
+      await fetchDonations();
+    } catch (err: any) {
       setError(
-        err instanceof Error ? err.message : "Failed to confirm donation",
+        err.detail || err.message || err.status || "Failed to confirm donation",
       );
     } finally {
       setConfirming(null);
@@ -143,29 +163,31 @@ export default function DonationsPage() {
   };
 
   const handleCancel = async (donationId: number) => {
-    setCancelling(donationId);
-    try {
-      const token = localStorage.getItem("accessToken");
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/cancel/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    const donation = donations.find((d) => d.id === donationId);
+    setConfirmDialog({
+      isOpen: true,
+      type: "cancel",
+      donationId,
+      donationDetails: donation,
+    });
+  };
 
-      if (response.ok) {
-        await fetchDonations();
-      } else {
-        const data = await response.json();
-        setError(data.status || "Failed to cancel donation");
-      }
-    } catch (err: unknown) {
+  const handleCancelApprove = async () => {
+    if (!confirmDialog.donationId) return;
+
+    setCancelling(confirmDialog.donationId);
+    try {
+      await cancelDonation(confirmDialog.donationId);
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        donationId: null,
+        donationDetails: null,
+      });
+      await fetchDonations();
+    } catch (err: any) {
       setError(
-        err instanceof Error ? err.message : "Failed to cancel donation",
+        err.detail || err.message || err.status || "Failed to cancel donation",
       );
     } finally {
       setCancelling(null);
@@ -261,6 +283,274 @@ export default function DonationsPage() {
     );
   }
 
+  const ViewDialog = () => {
+    if (!viewDialog) return null;
+
+    const donation = viewDialog;
+    const needName = needsMap.get(donation.need_item)?.name || "Unknown Need";
+
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-in">
+          <div className="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 className="text-xl font-bold text-gray-900">
+              Donation Details
+            </h3>
+            <button
+              onClick={() => setViewDialog(null)}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Close donation details"
+              title="Close"
+            >
+              <XCircle size={24} />
+            </button>
+          </div>
+
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Need Item</span>
+              <span className="col-span-2 text-gray-900">{needName}</span>
+            </div>
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Quantity</span>
+              <span className="col-span-2 text-gray-900">
+                {donation.quantity} {donation.units || "UNIT"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Donor Type</span>
+              <span className="col-span-2 text-gray-900 capitalize">
+                {donation.donor_type === "private"
+                  ? "Private Donor"
+                  : "Government"}
+              </span>
+            </div>
+
+            {donation.donor_type === "private" ? (
+              <>
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Donor Name</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_name || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Contact Person
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_contact || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Contact Number
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_phone || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Email</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_email || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Organization
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_organization || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Address</span>
+                  <span className="col-span-2 text-gray-900 truncate">
+                    {donation.donor_address || "N/A"}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Department</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_department || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Program</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_program || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Officer Name
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_officer_name || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Designation</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_officer_designation || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Contact Number
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_officer_contact || "N/A"}
+                  </span>
+                </div>
+              </>
+            )}
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Message</span>
+              <span className="col-span-2 text-gray-900">
+                {donation.message || "N/A"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">
+                Estimated Delivery
+              </span>
+              <span className="col-span-2 text-gray-900">
+                {donation.estimated_delivery_date
+                  ? new Date(
+                      donation.estimated_delivery_date,
+                    ).toLocaleDateString()
+                  : "N/A"}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-8 flex justify-end">
+            <button
+              onClick={() => setViewDialog(null)}
+              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Confirmation Dialog Modal
+  const ConfirmationDialog = () => {
+    if (!confirmDialog.isOpen || !confirmDialog.donationDetails) return null;
+
+    const donation = confirmDialog.donationDetails;
+    const isConfirm = confirmDialog.type === "confirm";
+
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in">
+          <div className="flex items-center justify-center mb-4">
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                isConfirm ? "bg-green-100" : "bg-red-100"
+              }`}
+            >
+              {isConfirm ? (
+                <CheckCircle2 className="text-green-600" size={24} />
+              ) : (
+                <XCircle className="text-red-600" size={24} />
+              )}
+            </div>
+          </div>
+
+          <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+            {isConfirm ? "Confirm Donation?" : "Cancel Donation?"}
+          </h3>
+
+          <p className="text-gray-600 text-center mb-4 text-sm">
+            {isConfirm
+              ? "Are you sure you want to confirm this donation?"
+              : "Are you sure you want to cancel this donation?"}
+          </p>
+
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Need Item:</span>
+              <span className="text-gray-900 font-medium">
+                {donation.need_item_detail?.name ||
+                  `Need ${donation.need_item}`}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Quantity:</span>
+              <span className="text-gray-900 font-medium">
+                {donation.quantity} {donation.need_item_detail?.unit || "units"}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Donor:</span>
+              <span className="text-gray-900 font-medium">
+                {donation.donor_type === "private"
+                  ? donation.donor_name
+                  : donation.government_department}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() =>
+                setConfirmDialog({
+                  isOpen: false,
+                  type: null,
+                  donationId: null,
+                  donationDetails: null,
+                })
+              }
+              className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition"
+              disabled={confirming !== null || cancelling !== null}
+            >
+              Back
+            </button>
+            <button
+              onClick={isConfirm ? handleConfirmApprove : handleCancelApprove}
+              className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition ${
+                isConfirm
+                  ? "bg-green-600 hover:bg-green-700 disabled:bg-green-400"
+                  : "bg-red-600 hover:bg-red-700 disabled:bg-red-400"
+              }`}
+              disabled={confirming !== null || cancelling !== null}
+            >
+              {confirming !== null || cancelling !== null
+                ? isConfirm
+                  ? "Confirming..."
+                  : "Cancelling..."
+                : isConfirm
+                  ? "Confirm"
+                  : "Cancel"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-6xl mx-auto">
@@ -354,7 +644,7 @@ export default function DonationsPage() {
                       Donor Info
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Date
+                      Requested Date
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                       Actions
@@ -526,6 +816,13 @@ export default function DonationsPage() {
                             </td>
                             <td className="px-6 py-4 text-sm">
                               <div className="flex gap-2">
+                                {" "}
+                                <button
+                                  onClick={() => setViewDialog(donation)}
+                                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium transition"
+                                >
+                                  View
+                                </button>{" "}
                                 {donation.status === "PENDING" && (
                                   <>
                                     <button
@@ -548,17 +845,6 @@ export default function DonationsPage() {
                                     </button>
                                   </>
                                 )}
-                                {donation.status === "CONFIRMED" && (
-                                  <span className="text-gray-500 text-xs">
-                                    No actions
-                                  </span>
-                                )}
-                                {donation.status !== "PENDING" &&
-                                  donation.status !== "CONFIRMED" && (
-                                    <span className="text-gray-500 text-xs">
-                                      No actions
-                                    </span>
-                                  )}
                               </div>
                             </td>
                           </tr>
@@ -623,6 +909,9 @@ export default function DonationsPage() {
           })}
         </div>
       </div>
+
+      <ConfirmationDialog />
+      <ViewDialog />
     </div>
   );
 }

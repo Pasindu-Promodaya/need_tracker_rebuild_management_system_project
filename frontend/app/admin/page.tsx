@@ -128,7 +128,11 @@ export default function AdminDashboard() {
                 className="pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 w-64 transition-all"
               />
             </div>
-            <button className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-600">
+            <button
+              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-600"
+              title="Manage Users"
+              aria-label="Manage Users"
+            >
               <Users size={20} />
             </button>
           </div>
@@ -396,9 +400,13 @@ function CriticalNeedRow({ need }: { need: NeedItem }) {
           </span>
         </div>
         <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `.progress-${need.id} { width: ${percent}%; }`,
+            }}
+          />
           <div
-            className="h-full bg-rose-500 rounded-full transition-all duration-1000"
-            style={{ width: `${percent}%` }}
+            className={`h-full bg-rose-500 rounded-full transition-all duration-1000 progress-${need.id}`}
           />
         </div>
         <div className="flex justify-between items-center pt-1">
