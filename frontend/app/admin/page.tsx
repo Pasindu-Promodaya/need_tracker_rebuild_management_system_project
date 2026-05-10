@@ -286,13 +286,6 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <ControlTile
-                label="Donation Management"
-                desc="Review and confirm incoming donations in one place."
-                icon={<DollarSign size={20} />}
-                href="/admin/donations"
-                color="blue"
-              />
-              <ControlTile
                 label="Manage Organizations"
                 desc="Create, update, and monitor organizations across the network."
                 icon={<Building2 size={20} />}

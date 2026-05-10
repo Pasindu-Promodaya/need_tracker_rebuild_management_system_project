@@ -39,7 +39,7 @@ export default function DonationsPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
+      if (user?.role !== "ORG_ADMIN") {
         router.push("/");
       }
     }
@@ -68,7 +68,7 @@ export default function DonationsPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-      if (user.role !== "ORG_ADMIN" && user.role !== "ADMIN") return;
+      if (user.role !== "ORG_ADMIN") return;
 
       try {
         setIsLoading(true);
@@ -77,47 +77,30 @@ export default function DonationsPage() {
         // Get all donations
         const allDonations = await getDonations();
 
-        if (user.role === "ADMIN") {
-          // Admins see everything
-          setDonations(allDonations);
+        // ORG_ADMIN logic
+        const orgs = await getOrganizations();
+        if (orgs.length > 0) {
+          setOrganization(orgs[0]);
 
-          // Optionally get some extra info for admins
-          const orgs = await getOrganizations();
           const nMap = new Map<number, any>();
-          orgs.forEach((org: any) => {
-            org.sections?.forEach((section: any) => {
-              section.needs?.forEach((need: any) => {
-                nMap.set(need.id, need);
-              });
+          orgs[0].sections?.forEach((section: any) => {
+            section.needs?.forEach((need: any) => {
+              nMap.set(need.id, need);
             });
           });
           setNeedsMap(nMap);
-        } else {
-          // ORG_ADMIN logic
-          const orgs = await getOrganizations();
-          if (orgs.length > 0) {
-            setOrganization(orgs[0]);
 
-            const nMap = new Map<number, any>();
-            orgs[0].sections?.forEach((section: any) => {
-              section.needs?.forEach((need: any) => {
-                nMap.set(need.id, need);
-              });
+          const orgNeedIds = new Set<number>();
+          orgs[0].sections?.forEach((section: any) => {
+            section.needs?.forEach((need: any) => {
+              orgNeedIds.add(need.id);
             });
-            setNeedsMap(nMap);
+          });
 
-            const orgNeedIds = new Set<number>();
-            orgs[0].sections?.forEach((section: any) => {
-              section.needs?.forEach((need: any) => {
-                orgNeedIds.add(need.id);
-              });
-            });
-
-            const filteredDonations = allDonations.filter((d) =>
-              orgNeedIds.has(d.need_item),
-            );
-            setDonations(filteredDonations);
-          }
+          const filteredDonations = allDonations.filter((d) =>
+            orgNeedIds.has(d.need_item),
+          );
+          setDonations(filteredDonations);
         }
       } catch (err: any) {
         setError(err.message || "Failed to fetch donations");
@@ -269,7 +252,7 @@ export default function DonationsPage() {
     );
   }
 
-  if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
+  if (user?.role !== "ORG_ADMIN") {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">

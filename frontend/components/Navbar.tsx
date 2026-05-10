@@ -35,7 +35,7 @@ export default function Navbar() {
   const [profileForm, setProfileForm] = useState({
     first_name: user?.first_name || "",
     last_name: user?.last_name || "",
-    email: user?.email || ""
+    email: user?.email || "",
   });
 
   const handleProfileSave = async (e: React.FormEvent) => {
@@ -190,18 +190,22 @@ export default function Navbar() {
                     >
                       All Needs
                     </Link>
-                    <Link
-                      href="/documents"
-                      className={`text-sm font-semibold transition-colors ${pathname === "/documents" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
-                    >
-                      Documents
-                    </Link>
-                    <Link
-                      href="/admin/donations"
-                      className={`text-sm font-semibold transition-colors ${pathname === "/admin/donations" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
-                    >
-                      Donations
-                    </Link>
+                    {user.role === "ORG_ADMIN" && (
+                      <>
+                        <Link
+                          href="/documents"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/documents" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Documents
+                        </Link>
+                        <Link
+                          href="/admin/donations"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/admin/donations" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Donations
+                        </Link>
+                      </>
+                    )}
                     {user.role === "ADMIN" && (
                       <Link
                         href="/admin/approvals"
