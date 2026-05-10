@@ -29,6 +29,96 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showProfile]);
 
+  const [saving, setSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileForm, setProfileForm] = useState({
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
+    email: user?.email || "",
+  });
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    try {
+      const updated = await updateCurrentUser(profileForm);
+      setUser(updated);
+      setProfileSuccess("Profile updated successfully.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to update profile.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    new_password2: "",
+  });
+
+  const handlePasswordSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    try {
+      await updateCurrentUser(passwordForm);
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+        new_password2: "",
+      });
+      setProfileSuccess("Password changed successfully.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to change password.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isAdmin = user?.role === "ADMIN" || user?.role === "ORG_ADMIN";
+
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
+    }
+  };
+
+  const publicNavLinks = [
+    { href: "/", label: "Home" },
+    { href: "/needs", label: "Current Needs" },
+  ];
+
+  const navLinks = isAdmin
+    ? [
+        { href: "/", label: "Dashboard" },
+        { href: "/organizations", label: "Organizations" },
+        { href: "/needs", label: "All Needs" },
+        ...(user?.role === "ADMIN"
+          ? [{ href: "/admin/approvals", label: "Approvals" }]
+          : []),
+        ...(user?.role === "ORG_ADMIN"
+          ? [
+              { href: "/documents", label: "Documents" },
+              { href: "/admin/donations", label: "Donations" },
+            ]
+          : []),
+      ]
+    : [
+        { href: "/", label: "Dashboard" },
+        { href: "/needs", label: "Current Needs" },
+      ];
+
   const handleNavMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const navEl = navRef.current;
     if (!navEl) return;
@@ -80,7 +170,7 @@ export default function Navbar() {
 
               {/* Navigation Links */}
               <div className="hidden md:flex items-center space-x-8">
-                {(user?.role === "ADMIN" || user?.role === "ORG_ADMIN") ? (
+                {user?.role === "ADMIN" || user?.role === "ORG_ADMIN" ? (
                   <>
                     <Link
                       href={user.role === "ADMIN" ? "/admin" : "/org-admin"}
@@ -100,18 +190,22 @@ export default function Navbar() {
                     >
                       All Needs
                     </Link>
-                    <Link
-                      href="/documents"
-                      className={`text-sm font-semibold transition-colors ${pathname === "/documents" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
-                    >
-                      Documents
-                    </Link>
-                    <Link
-                      href="/admin/donations"
-                      className={`text-sm font-semibold transition-colors ${pathname === "/admin/donations" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
-                    >
-                      Donations
-                    </Link>
+                    {user.role === "ORG_ADMIN" && (
+                      <>
+                        <Link
+                          href="/documents"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/documents" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Documents
+                        </Link>
+                        <Link
+                          href="/admin/donations"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/admin/donations" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Donations
+                        </Link>
+                      </>
+                    )}
                     {user.role === "ADMIN" && (
                       <Link
                         href="/admin/approvals"
@@ -187,7 +281,10 @@ export default function Navbar() {
                   </Link>
                 </div>
               ) : (
-                <div className="flex items-center gap-4 relative" ref={panelRef}>
+                <div
+                  className="flex items-center gap-4 relative"
+                  ref={panelRef}
+                >
                   {(user.role === "ADMIN" || user.role === "ORG_ADMIN") && (
                     <div className="hidden sm:flex flex-col items-end mr-1">
                       <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
@@ -231,10 +328,13 @@ export default function Navbar() {
                           onClick={() => setShowProfile(false)}
                           className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors group"
                         >
-                          <UserCircle size={18} className="text-slate-400 group-hover:text-blue-600" />
+                          <UserCircle
+                            size={18}
+                            className="text-slate-400 group-hover:text-blue-600"
+                          />
                           My Profile
                         </Link>
-                        
+
                         <button
                           onClick={() => {
                             setShowProfile(false);
@@ -242,8 +342,18 @@ export default function Navbar() {
                           }}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors group border-t border-slate-50 mt-1 pt-3"
                         >
-                          <svg className="w-[18px] h-[18px] text-slate-400 group-hover:text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          <svg
+                            className="w-[18px] h-[18px] text-slate-400 group-hover:text-rose-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                            />
                           </svg>
                           Sign out
                         </button>

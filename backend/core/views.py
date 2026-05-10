@@ -769,18 +769,33 @@ class DonationViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):
-        """Confirm a donation and update the NeedItem's quantity_received"""
+        """Confirm a donation and update the NeedItem's quantity_received. 
+        When need reaches 100% fulfillment, automatically mark all confirmed donations as FULFILLED"""
         donation = self.get_object()
         if donation.status == 'PENDING':
-            donation.status = 'CONFIRMED'
-            donation.save()
-            
             # Update the need item's quantity_received
             need_item = donation.need_item
             need_item.quantity_received += donation.quantity
             need_item.save()
             
-            return Response({'status': 'Donation confirmed', 'need_item': need_item.quantity_received}, status=status.HTTP_200_OK)
+            # Set this donation to CONFIRMED
+            donation.status = 'CONFIRMED'
+            donation.save()
+            
+            # Check if need is now 100% fulfilled
+            if need_item.quantity_received >= need_item.quantity_required:
+                # Mark all CONFIRMED donations for this need as FULFILLED
+                Donation.objects.filter(
+                    need_item=need_item,
+                    status='CONFIRMED'
+                ).update(status='FULFILLED')
+            
+            return Response({
+                'status': 'Donation confirmed', 
+                'donation_status': donation.status,
+                'need_item': need_item.quantity_received,
+                'need_fulfilled': need_item.quantity_received >= need_item.quantity_required
+            }, status=status.HTTP_200_OK)
         return Response({'status': 'Donation not in pending state'}, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['post'])
@@ -792,3 +807,4 @@ class DonationViewSet(viewsets.ModelViewSet):
             donation.save()
             return Response({'status': 'Donation cancelled'}, status=status.HTTP_200_OK)
         return Response({'status': 'Only pending donations can be cancelled'}, status=status.HTTP_400_BAD_REQUEST)
+

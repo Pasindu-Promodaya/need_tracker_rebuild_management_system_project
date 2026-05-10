@@ -237,7 +237,6 @@ async function fetchAPI<T>(
       }
     } catch {}
 
-    console.error(`[API] Request failed: ${errorMessage}`);
     throw new Error(errorMessage);
   }
 
@@ -462,6 +461,12 @@ export const updateDonation = (id: number, data: Partial<Donation>) =>
     method: "PATCH",
     body: JSON.stringify(data),
   });
+
+export const confirmDonation = (id: number) =>
+  fetchAPI<any>(`/donations/${id}/confirm/`, { method: "POST" });
+
+export const cancelDonation = (id: number) =>
+  fetchAPI<any>(`/donations/${id}/cancel/`, { method: "POST" });
 
 export const deleteDonation = (id: number) =>
   fetchAPI<void>(`/donations/${id}/`, { method: "DELETE" });

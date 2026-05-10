@@ -2,37 +2,73 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { Donation, getDonations, getOrganizations } from "@/lib/api";
+import {
+  Donation,
+  getDonations,
+  getOrganizations,
+  confirmDonation,
+  cancelDonation,
+} from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { CheckCircle2, XCircle, Clock, Gift, X } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
-import styles from "../donations.module.css";
 
-export default function DonationManagementPage() {
+export default function DonationsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
-  const [organization, setOrganization] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<string>("PENDING");
   const [confirming, setConfirming] = useState<number | null>(null);
   const [cancelling, setCancelling] = useState<number | null>(null);
-  const [showFulfilledModal, setShowFulfilledModal] = useState(false);
   const [needsMap, setNeedsMap] = useState<Map<number, any>>(new Map());
+  const [organization, setOrganization] = useState<any>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: "confirm" | "cancel" | null;
+    donationId: number | null;
+    donationDetails: any | null;
+  }>({
+    isOpen: false,
+    type: null,
+    donationId: null,
+    donationDetails: null,
+  });
+  const [viewDialog, setViewDialog] = useState<any>(null);
 
   useEffect(() => {
     if (!authLoading) {
-      if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
+      if (user?.role !== "ORG_ADMIN") {
         router.push("/");
       }
     }
   }, [user, authLoading, router]);
 
+  const fetchDonations = async () => {
+    if (!user || user.role !== "ORG_ADMIN") return;
+
+    try {
+      setError("");
+      const data = await getDonations();
+      // Sort donations by most recent completely
+      const sortedData = [...data].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      setDonations(sortedData);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch donations",
+      );
+      console.error("Error fetching donations:", err);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-      if (user.role !== "ORG_ADMIN" && user.role !== "ADMIN") return;
+      if (user.role !== "ORG_ADMIN") return;
 
       try {
         setIsLoading(true);
@@ -41,47 +77,30 @@ export default function DonationManagementPage() {
         // Get all donations
         const allDonations = await getDonations();
 
-        if (user.role === "ADMIN") {
-          // Admins see everything
-          setDonations(allDonations);
-          
-          // Optionally get some extra info for admins
-          const orgs = await getOrganizations();
+        // ORG_ADMIN logic
+        const orgs = await getOrganizations();
+        if (orgs.length > 0) {
+          setOrganization(orgs[0]);
+
           const nMap = new Map<number, any>();
-          orgs.forEach((org: any) => {
-            org.sections?.forEach((section: any) => {
-              section.needs?.forEach((need: any) => {
-                nMap.set(need.id, need);
-              });
+          orgs[0].sections?.forEach((section: any) => {
+            section.needs?.forEach((need: any) => {
+              nMap.set(need.id, need);
             });
           });
           setNeedsMap(nMap);
-        } else {
-          // ORG_ADMIN logic
-          const orgs = await getOrganizations();
-          if (orgs.length > 0) {
-            setOrganization(orgs[0]);
 
-            const nMap = new Map<number, any>();
-            orgs[0].sections?.forEach((section: any) => {
-              section.needs?.forEach((need: any) => {
-                nMap.set(need.id, need);
-              });
+          const orgNeedIds = new Set<number>();
+          orgs[0].sections?.forEach((section: any) => {
+            section.needs?.forEach((need: any) => {
+              orgNeedIds.add(need.id);
             });
-            setNeedsMap(nMap);
+          });
 
-            const orgNeedIds = new Set<number>();
-            orgs[0].sections?.forEach((section: any) => {
-              section.needs?.forEach((need: any) => {
-                orgNeedIds.add(need.id);
-              });
-            });
-
-            const filteredDonations = allDonations.filter((d) =>
-              orgNeedIds.has(d.need_item),
-            );
-            setDonations(filteredDonations);
-          }
+          const filteredDonations = allDonations.filter((d) =>
+            orgNeedIds.has(d.need_item),
+          );
+          setDonations(filteredDonations);
         }
       } catch (err: any) {
         setError(err.message || "Failed to fetch donations");
@@ -95,64 +114,64 @@ export default function DonationManagementPage() {
   }, [user]);
 
   const handleConfirm = async (donationId: number) => {
-    setConfirming(donationId);
-    try {
-      const token = localStorage.getItem("accessToken");
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/confirm/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    const donation = donations.find((d) => d.id === donationId);
+    setConfirmDialog({
+      isOpen: true,
+      type: "confirm",
+      donationId,
+      donationDetails: donation,
+    });
+  };
 
-      if (response.ok) {
-        setDonations(
-          donations.map((d) =>
-            d.id === donationId ? { ...d, status: "CONFIRMED" } : d,
-          ),
-        );
-      } else {
-        const data = await response.json();
-        setError(data.status || "Failed to confirm donation");
-      }
+  const handleConfirmApprove = async () => {
+    if (!confirmDialog.donationId) return;
+
+    setConfirming(confirmDialog.donationId);
+    try {
+      await confirmDonation(confirmDialog.donationId);
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        donationId: null,
+        donationDetails: null,
+      });
+      await fetchDonations();
     } catch (err: any) {
-      setError(err.message || "Failed to confirm donation");
+      setError(
+        err.detail || err.message || err.status || "Failed to confirm donation",
+      );
     } finally {
       setConfirming(null);
     }
   };
 
   const handleCancel = async (donationId: number) => {
-    setCancelling(donationId);
-    try {
-      const token = localStorage.getItem("accessToken");
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/donations/${donationId}/cancel/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
+    const donation = donations.find((d) => d.id === donationId);
+    setConfirmDialog({
+      isOpen: true,
+      type: "cancel",
+      donationId,
+      donationDetails: donation,
+    });
+  };
 
-      if (response.ok) {
-        setDonations(
-          donations.map((d) =>
-            d.id === donationId ? { ...d, status: "CANCELLED" } : d,
-          ),
-        );
-      } else {
-        const data = await response.json();
-        setError(data.status || "Failed to cancel donation");
-      }
+  const handleCancelApprove = async () => {
+    if (!confirmDialog.donationId) return;
+
+    setCancelling(confirmDialog.donationId);
+    try {
+      await cancelDonation(confirmDialog.donationId);
+      setConfirmDialog({
+        isOpen: false,
+        type: null,
+        donationId: null,
+        donationDetails: null,
+      });
+      await fetchDonations();
     } catch (err: any) {
-      setError(err.message || "Failed to cancel donation");
+      setError(
+        err.detail || err.message || err.status || "Failed to cancel donation",
+      );
     } finally {
       setCancelling(null);
     }
@@ -184,19 +203,46 @@ export default function DonationManagementPage() {
     }
   };
 
-  const formatStatusDisplay = (status: string): string => {
-    const statusMap: { [key: string]: string } = {
-      PENDING: "Pending",
-      CONFIRMED: "Confirmed",
-      FULFILLED: "Fulfilled",
-      CANCELLED: "Cancelled",
-      ALL: "All",
-    };
-    return statusMap[status] || status;
+  // Group fulfilled donations by need item
+  const groupDonationsByNeedItem = (
+    donations: Donation[],
+  ): Record<number, Donation[]> => {
+    return donations.reduce(
+      (groups, donation) => {
+        const needId = donation.need_item;
+        if (!groups[needId]) {
+          groups[needId] = [];
+        }
+        groups[needId].push(donation);
+        return groups;
+      },
+      {} as Record<number, Donation[]>,
+    );
   };
 
-  const filteredDonations =
-    filter === "ALL" ? donations : donations.filter((d) => d.status === filter);
+  const filteredDonations = (() => {
+    let result = [];
+    if (filter === "ALL") result = donations;
+    else if (filter === "CONFIRMED")
+      result = donations.filter(
+        (d) => d.status === "CONFIRMED" || d.status === "FULFILLED",
+      );
+    else result = donations.filter((d) => d.status === filter);
+
+    // Ensure the array is always sorted newest-first
+    return result.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+  })();
+
+  // For FULFILLED filter, group by need item
+  const groupedFulfilledDonations =
+    filter === "FULFILLED"
+      ? groupDonationsByNeedItem(
+          donations.filter((d) => d.status === "FULFILLED"),
+        )
+      : {};
 
   if (authLoading || isLoading) {
     return (
@@ -206,7 +252,7 @@ export default function DonationManagementPage() {
     );
   }
 
-  if (user?.role !== "ADMIN" && user?.role !== "ORG_ADMIN") {
+  if (user?.role !== "ORG_ADMIN") {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">
@@ -220,11 +266,279 @@ export default function DonationManagementPage() {
     );
   }
 
+  const ViewDialog = () => {
+    if (!viewDialog) return null;
+
+    const donation = viewDialog;
+    const needName = needsMap.get(donation.need_item)?.name || "Unknown Need";
+
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-in">
+          <div className="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 className="text-xl font-bold text-gray-900">
+              Donation Details
+            </h3>
+            <button
+              onClick={() => setViewDialog(null)}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="Close donation details"
+              title="Close"
+            >
+              <XCircle size={24} />
+            </button>
+          </div>
+
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Need Item</span>
+              <span className="col-span-2 text-gray-900">{needName}</span>
+            </div>
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Quantity</span>
+              <span className="col-span-2 text-gray-900">
+                {donation.quantity} {donation.units || "UNIT"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Donor Type</span>
+              <span className="col-span-2 text-gray-900 capitalize">
+                {donation.donor_type === "private"
+                  ? "Private Donor"
+                  : "Government"}
+              </span>
+            </div>
+
+            {donation.donor_type === "private" ? (
+              <>
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Donor Name</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_name || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Contact Person
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_contact || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Contact Number
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_phone || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Email</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_email || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Organization
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.donor_organization || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Address</span>
+                  <span className="col-span-2 text-gray-900 truncate">
+                    {donation.donor_address || "N/A"}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Department</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_department || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Program</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_program || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Officer Name
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_officer_name || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Designation</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_officer_designation || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">
+                    Contact Number
+                  </span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_officer_contact || "N/A"}
+                  </span>
+                </div>
+              </>
+            )}
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">Message</span>
+              <span className="col-span-2 text-gray-900">
+                {donation.message || "N/A"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+              <span className="text-gray-500 font-medium">
+                Estimated Delivery
+              </span>
+              <span className="col-span-2 text-gray-900">
+                {donation.estimated_delivery_date
+                  ? new Date(
+                      donation.estimated_delivery_date,
+                    ).toLocaleDateString()
+                  : "N/A"}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-8 flex justify-end">
+            <button
+              onClick={() => setViewDialog(null)}
+              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Confirmation Dialog Modal
+  const ConfirmationDialog = () => {
+    if (!confirmDialog.isOpen || !confirmDialog.donationDetails) return null;
+
+    const donation = confirmDialog.donationDetails;
+    const isConfirm = confirmDialog.type === "confirm";
+
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in">
+          <div className="flex items-center justify-center mb-4">
+            <div
+              className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                isConfirm ? "bg-green-100" : "bg-red-100"
+              }`}
+            >
+              {isConfirm ? (
+                <CheckCircle2 className="text-green-600" size={24} />
+              ) : (
+                <XCircle className="text-red-600" size={24} />
+              )}
+            </div>
+          </div>
+
+          <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+            {isConfirm ? "Confirm Donation?" : "Cancel Donation?"}
+          </h3>
+
+          <p className="text-gray-600 text-center mb-4 text-sm">
+            {isConfirm
+              ? "Are you sure you want to confirm this donation?"
+              : "Are you sure you want to cancel this donation?"}
+          </p>
+
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Need Item:</span>
+              <span className="text-gray-900 font-medium">
+                {donation.need_item_detail?.name ||
+                  `Need ${donation.need_item}`}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Quantity:</span>
+              <span className="text-gray-900 font-medium">
+                {donation.quantity} {donation.need_item_detail?.unit || "units"}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Donor:</span>
+              <span className="text-gray-900 font-medium">
+                {donation.donor_type === "private"
+                  ? donation.donor_name
+                  : donation.government_department}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() =>
+                setConfirmDialog({
+                  isOpen: false,
+                  type: null,
+                  donationId: null,
+                  donationDetails: null,
+                })
+              }
+              className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition"
+              disabled={confirming !== null || cancelling !== null}
+            >
+              Back
+            </button>
+            <button
+              onClick={isConfirm ? handleConfirmApprove : handleCancelApprove}
+              className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition ${
+                isConfirm
+                  ? "bg-green-600 hover:bg-green-700 disabled:bg-green-400"
+                  : "bg-red-600 hover:bg-red-700 disabled:bg-red-400"
+              }`}
+              disabled={confirming !== null || cancelling !== null}
+            >
+              {confirming !== null || cancelling !== null
+                ? isConfirm
+                  ? "Confirming..."
+                  : "Cancelling..."
+                : isConfirm
+                  ? "Confirm"
+                  : "Cancel"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-4xl font-bold text-gray-900">
             Donation Management
           </h1>
           <p className="text-gray-600 mt-2">
@@ -246,24 +560,44 @@ export default function DonationManagementPage() {
 
         <div className="mb-6 flex gap-2 border-b border-gray-200">
           {["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED", "ALL"].map(
-            (status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-3 font-medium border-b-2 transition ${
-                  filter === status
-                    ? "text-blue-600 border-blue-600"
-                    : "text-gray-600 border-transparent hover:text-gray-900"
-                }`}
-              >
-                {formatStatusDisplay(status)}
-                {status !== "ALL" && (
-                  <span className="ml-2 text-sm">
-                    ({donations.filter((d) => d.status === status).length})
-                  </span>
-                )}
-              </button>
-            ),
+            (status) => {
+              let count = 0;
+              if (status === "ALL") {
+                count = donations.length;
+              } else if (status === "CONFIRMED") {
+                count = donations.filter(
+                  (d) => d.status === "CONFIRMED" || d.status === "FULFILLED",
+                ).length;
+              } else if (status === "FULFILLED") {
+                // Count unique need items for FULFILLED tab
+                const fulfilledDonations = donations.filter(
+                  (d) => d.status === "FULFILLED",
+                );
+                const uniqueNeeds = new Set(
+                  fulfilledDonations.map((d) => d.need_item),
+                );
+                count = uniqueNeeds.size;
+              } else {
+                count = donations.filter((d) => d.status === status).length;
+              }
+
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-4 py-3 font-medium border-b-2 transition ${
+                    filter === status
+                      ? "text-blue-600 border-blue-600"
+                      : "text-gray-600 border-transparent hover:text-gray-900"
+                  }`}
+                >
+                  {status}
+                  {status !== "ALL" && (
+                    <span className="ml-2 text-sm">({count})</span>
+                  )}
+                </button>
+              );
+            },
           )}
         </div>
 
@@ -293,7 +627,7 @@ export default function DonationManagementPage() {
                       Donor Info
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Date
+                      Requested Date
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                       Actions
@@ -301,90 +635,204 @@ export default function DonationManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredDonations.map((donation) => (
-                    <tr
-                      key={donation.id}
-                      className="hover:bg-gray-50 transition"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(donation.status)}
-                          <span
-                            className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(donation.status)}`}
+                  {filter === "FULFILLED"
+                    ? // For FULFILLED donations, group by need item and show all donors
+                      Object.entries(groupedFulfilledDonations)
+                        .sort(
+                          ([, a], [, b]) =>
+                            new Date(b[0].created_at).getTime() -
+                            new Date(a[0].created_at).getTime(),
+                        )
+                        .map(([needId, needDonations]) => {
+                          const firstDonation = needDonations[0];
+                          const totalQuantity = needDonations.reduce(
+                            (sum, d) => sum + d.quantity,
+                            0,
+                          );
+                          return (
+                            <tr
+                              key={needId}
+                              className="hover:bg-gray-50 transition"
+                            >
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  {getStatusIcon("FULFILLED")}
+                                  <span
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge("FULFILLED")}`}
+                                  >
+                                    FULFILLED
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm">
+                                <div className="font-medium text-gray-900">
+                                  {firstDonation.need_item_detail?.name ||
+                                    `Need ${firstDonation.need_item}`}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-600">
+                                <div className="space-y-2">
+                                  {needDonations.map((donation, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center py-1"
+                                    >
+                                      {donation.quantity}{" "}
+                                      {donation.need_item_detail?.unit ||
+                                        "units"}
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm">
+                                <div className="space-y-2">
+                                  {needDonations.map((donation, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center py-1"
+                                    >
+                                      <span
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${donation.donor_type === "private" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}
+                                      >
+                                        {donation.donor_type === "private"
+                                          ? "Private"
+                                          : "Government"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm">
+                                <div className="space-y-2">
+                                  {needDonations.map((donation, idx) => (
+                                    <div key={idx} className="py-1">
+                                      <div className="text-gray-900 font-medium text-xs">
+                                        {donation.donor_type === "private"
+                                          ? donation.donor_name
+                                          : donation.government_department}
+                                      </div>
+                                      {donation.donor_type === "private" && (
+                                        <div className="text-gray-500 text-[10px]">
+                                          {donation.donor_email}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-600">
+                                <div className="space-y-2">
+                                  {needDonations.map((donation, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="py-1 flex items-center whitespace-nowrap text-xs"
+                                    >
+                                      {new Date(
+                                        donation.created_at,
+                                      ).toLocaleDateString()}
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm">
+                                <span className="text-gray-500 text-xs">
+                                  No actions
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                    : // For other statuses, show one row per donation
+                      filteredDonations.map((donation) => {
+                        const displayStatus =
+                          filter === "CONFIRMED"
+                            ? "CONFIRMED"
+                            : donation.status;
+                        return (
+                          <tr
+                            key={donation.id}
+                            className="hover:bg-gray-50 transition"
                           >
-                            {donation.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="font-medium text-gray-900">
-                          {donation.need_item_detail?.name ||
-                            `Need ${donation.need_item}`}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {donation.quantity}{" "}
-                        {donation.need_item_detail?.unit || "units"}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            donation.donor_type === "private"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {donation.donor_type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="text-gray-900 font-medium">
-                          {donation.donor_type === "private"
-                            ? donation.donor_name
-                            : donation.government_department}
-                        </div>
-                        {donation.donor_type === "private" && (
-                          <div className="text-gray-600 text-xs">
-                            {donation.donor_email}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(donation.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex gap-2">
-                          {donation.status === "PENDING" && (
-                            <>
-                              <button
-                                onClick={() => handleConfirm(donation.id)}
-                                disabled={confirming === donation.id}
-                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs font-medium transition"
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(displayStatus)}
+                                <span
+                                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(displayStatus)}`}
+                                >
+                                  {displayStatus}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <div className="font-medium text-gray-900">
+                                {donation.need_item_detail?.name ||
+                                  `Need ${donation.need_item}`}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {donation.quantity}{" "}
+                              {donation.need_item_detail?.unit || "units"}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${donation.donor_type === "private" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}
                               >
-                                {confirming === donation.id
-                                  ? "Confirming..."
-                                  : "Confirm"}
-                              </button>
-                              <button
-                                onClick={() => handleCancel(donation.id)}
-                                disabled={cancelling === donation.id}
-                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-xs font-medium transition"
-                              >
-                                {cancelling === donation.id
-                                  ? "Cancelling..."
-                                  : "Cancel"}
-                              </button>
-                            </>
-                          )}
-                          {donation.status !== "PENDING" && (
-                            <span className="text-gray-500 text-xs">
-                              No actions
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                                {donation.donor_type}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <div className="text-gray-900 font-medium">
+                                {donation.donor_type === "private"
+                                  ? donation.donor_name
+                                  : donation.government_department}
+                              </div>
+                              {donation.donor_type === "private" && (
+                                <div className="text-gray-600 text-xs">
+                                  {donation.donor_email}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {new Date(
+                                donation.created_at,
+                              ).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <div className="flex gap-2">
+                                {" "}
+                                <button
+                                  onClick={() => setViewDialog(donation)}
+                                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium transition"
+                                >
+                                  View
+                                </button>{" "}
+                                {donation.status === "PENDING" && (
+                                  <>
+                                    <button
+                                      onClick={() => handleConfirm(donation.id)}
+                                      disabled={confirming === donation.id}
+                                      className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs font-medium transition"
+                                    >
+                                      {confirming === donation.id
+                                        ? "Confirming..."
+                                        : "Confirm"}
+                                    </button>
+                                    <button
+                                      onClick={() => handleCancel(donation.id)}
+                                      disabled={cancelling === donation.id}
+                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-xs font-medium transition"
+                                    >
+                                      {cancelling === donation.id
+                                        ? "Cancelling..."
+                                        : "Cancel"}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                 </tbody>
               </table>
             </div>
@@ -392,195 +840,61 @@ export default function DonationManagementPage() {
         </div>
 
         <div className="grid grid-cols-4 gap-6 mt-8">
-          {["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED"].map((status) => (
-            <div
-              key={status}
-              onClick={() => {
-                if (status === "FULFILLED") {
-                  setShowFulfilledModal(true);
-                }
-              }}
-              className={`bg-white rounded-lg shadow p-6 ${
-                status === "FULFILLED"
-                  ? "cursor-pointer hover:shadow-lg transition"
-                  : ""
-              }`}
-            >
-              <div className="text-gray-600 text-sm font-medium">
-                {formatStatusDisplay(status)}
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">
-                {status === "FULFILLED"
-                  ? Array.from(needsMap.values()).filter((need) => {
-                      const remaining =
-                        need.quantity_required - need.quantity_received;
-                      return remaining <= 0;
-                    }).length
-                  : donations.filter((d) => d.status === status).length}
-              </div>
-              <div className="text-gray-600 text-sm mt-2">
-                Total:{" "}
-                {status === "FULFILLED"
-                  ? Array.from(needsMap.values())
-                      .filter((need) => {
-                        const remaining =
-                          need.quantity_required - need.quantity_received;
-                        return remaining <= 0;
-                      })
-                      .reduce((sum, need) => sum + need.quantity_required, 0)
-                  : donations
-                      .filter((d) => d.status === status)
-                      .reduce((sum, d) => sum + d.quantity, 0)}{" "}
-                units
-              </div>
-              {status === "FULFILLED" && (
-                <div className="text-blue-600 text-xs mt-3 font-semibold">
-                  View History →
+          {["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED"].map((status) => {
+            let count = 0;
+            let totalQuantity = 0;
+
+            if (status === "CONFIRMED") {
+              const confirmedAndFulfilled = donations.filter(
+                (d) => d.status === "CONFIRMED" || d.status === "FULFILLED",
+              );
+              count = confirmedAndFulfilled.length;
+              totalQuantity = confirmedAndFulfilled.reduce(
+                (sum, d) => sum + d.quantity,
+                0,
+              );
+            } else if (status === "FULFILLED") {
+              const fulfilledDonations = donations.filter(
+                (d) => d.status === "FULFILLED",
+              );
+              const uniqueNeeds = new Set(
+                fulfilledDonations.map((d) => d.need_item),
+              );
+              count = uniqueNeeds.size;
+              totalQuantity = fulfilledDonations.reduce(
+                (sum, d) => sum + d.quantity,
+                0,
+              );
+            } else {
+              const standardDonations = donations.filter(
+                (d) => d.status === status,
+              );
+              count = standardDonations.length;
+              totalQuantity = standardDonations.reduce(
+                (sum, d) => sum + d.quantity,
+                0,
+              );
+            }
+
+            return (
+              <div key={status} className="bg-white rounded-lg shadow p-6">
+                <div className="text-gray-600 text-sm font-medium">
+                  {status}
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="text-3xl font-bold text-gray-900 mt-2">
+                  {count}
+                </div>
+                <div className="text-gray-600 text-sm mt-2">
+                  Total: {totalQuantity} units
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        {/* Fulfilled Donations Modal */}
-        {showFulfilledModal && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-              {/* Modal Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Fulfilled Donations History
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    Completed and delivered donations
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowFulfilledModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                  title="Close fulfilled donations history"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="overflow-y-auto flex-1 p-6">
-                {Array.from(needsMap.values()).filter((need) => {
-                  const remaining =
-                    need.quantity_required - need.quantity_received;
-                  return remaining <= 0;
-                }).length === 0 ? (
-                  <div className="text-center text-gray-500 py-12">
-                    No fulfilled needs yet
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Array.from(needsMap.values())
-                      .filter((need) => {
-                        const remaining =
-                          need.quantity_required - need.quantity_received;
-                        return remaining <= 0;
-                      })
-                      .map((need) => {
-                        const remaining =
-                          need.quantity_required - need.quantity_received;
-                        const percentComplete = Math.min(
-                          100,
-                          Math.round(
-                            (need.quantity_received / need.quantity_required) *
-                              100,
-                          ),
-                        );
-                        const priorityColorMap: Record<string, string> = {
-                          CRITICAL: "border-red-200 bg-red-50",
-                          ESSENTIAL: "border-orange-200 bg-orange-50",
-                          NICE: "border-green-200 bg-green-50",
-                        };
-                        const priorityColor =
-                          priorityColorMap[need.priority] || "border-gray-200";
-
-                        const priorityBadgeColorMap: Record<string, string> = {
-                          CRITICAL: "bg-red-100 text-red-800",
-                          ESSENTIAL: "bg-orange-100 text-orange-800",
-                          NICE: "bg-green-100 text-green-800",
-                        };
-                        const priorityBadgeColor =
-                          priorityBadgeColorMap[need.priority];
-
-                        return (
-                          <div
-                            key={need.id}
-                            className={`border rounded-lg p-4 ${priorityColor}`}
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <h3 className="font-semibold text-gray-900">
-                                  {need.name}
-                                </h3>
-                                <p className="text-sm text-gray-600">
-                                  {need.section_detail?.name}
-                                </p>
-                              </div>
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${priorityBadgeColor}`}
-                              >
-                                {need.priority}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-3">
-                              {need.description}
-                            </p>
-                            <div className="mb-3">
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm font-medium text-gray-700">
-                                  Progress
-                                </span>
-                                <span className="text-sm font-medium text-gray-700">
-                                  {percentComplete}%
-                                </span>
-                              </div>
-                              <div className={styles.progressBar}>
-                                <div
-                                  className={styles.progressFill}
-                                  data-progress-width={percentComplete}
-                                />
-                              </div>
-                            </div>
-                            <div className="flex justify-between text-sm mb-3">
-                              <span className="text-green-600 font-medium">
-                                Received: {need.quantity_received} {need.unit}
-                              </span>
-                              <span className="text-gray-600">
-                                Needed: {Math.max(0, remaining)} {need.unit}
-                              </span>
-                            </div>
-                            <div className="bg-green-100 border border-green-300 rounded px-3 py-2 text-center">
-                              <p className="text-sm font-semibold text-green-700">
-                                ✓ Requirement Fulfilled
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bg-gray-50 border-t border-gray-200 p-4 flex justify-end">
-                <button
-                  onClick={() => setShowFulfilledModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      <ConfirmationDialog />
+      <ViewDialog />
     </div>
   );
 }
