@@ -1,0 +1,114 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # 1. Backend CI
+  backend-ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: rebuild_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin1234
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' 
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        env:
+          SECRET_KEY: 'test-secret-key'
+          DB_NAME: rebuild_db
+          DB_USER: postgres
+          DB_PASSWORD: admin1234
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DEBUG: 'True'
+        run: |
+          cd backend
+          python manage.py test
+
+
+  # 2. Frontend CI
+  frontend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Lint
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+
+  # 3. Docker Build Verification
+  docker-build:
+    needs: [backend-ci, frontend-ci]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: needtracker-backend:latest
+
+      - name: Build Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: needtracker-frontend:latest
+
+
+    # 4. UPCOMING CD Process  -----------       
