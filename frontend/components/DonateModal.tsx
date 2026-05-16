@@ -21,6 +21,7 @@ export interface DonationFormData {
   governmentOfficerName: string;
   governmentOfficerDesignation: string;
   governmentOfficerContact: string;
+  governmentEmail: string;
 }
 
 interface DonateModalProps {
@@ -58,6 +59,7 @@ export default function DonateModal({
   const [governmentOfficerDesignation, setGovernmentOfficerDesignation] =
     useState("");
   const [governmentOfficerContact, setGovernmentOfficerContact] = useState("");
+  const [governmentEmail, setGovernmentEmail] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -110,6 +112,7 @@ export default function DonateModal({
         donationData.government_officer_designation =
           governmentOfficerDesignation;
         donationData.government_officer_contact = governmentOfficerContact;
+        donationData.government_email = governmentEmail;
       }
 
       await createDonation(donationData);
@@ -131,6 +134,12 @@ export default function DonateModal({
         setDonorOrganization("");
         setDonorAddress("");
         setDonorContact("");
+        setGovernmentDepartment("");
+        setGovernmentProgram("");
+        setGovernmentOfficerName("");
+        setGovernmentOfficerDesignation("");
+        setGovernmentOfficerContact("");
+        setGovernmentEmail("");
         setSuccess(false);
         onSuccess();
         onClose();
@@ -394,6 +403,13 @@ export default function DonateModal({
                       onChange={(e) =>
                         setGovernmentOfficerContact(e.target.value)
                       }
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={governmentEmail}
+                      onChange={(e) => setGovernmentEmail(e.target.value)}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>

@@ -21,7 +21,7 @@ class DonorUserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'date_joined', 'donations_count']
 
     def get_donations_count(self, obj):
-        return obj.donations.count()
+        return obj.donations.filter(status__in=['CONFIRMED', 'FULFILLED']).count()
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
     current_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -356,5 +356,6 @@ class DonationSerializer(serializers.ModelSerializer):
             'donor_name', 'donor_contact', 'donor_organization', 'donor_address',
             'donor_email', 'donor_phone', 'government_department', 'government_program',
             'government_officer_name', 'government_officer_designation',
-            'government_officer_contact', 'donation_letter_file'
+            'government_officer_contact', 'government_email', 'donation_letter_file'
         ]
+

@@ -116,6 +116,7 @@ export interface Donation {
   government_officer_name: string;
   government_officer_designation: string;
   government_officer_contact: string;
+  government_email: string;
   donation_letter_file: string | null;
   need_item_detail?: {
     id: number;

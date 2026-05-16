@@ -194,13 +194,16 @@ export default function AdminDashboard() {
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center relative">
-                    <AlertTriangle className="text-rose-600" size={20} />
-                    {stats.criticalNeeds > 0 && (
-                      <span className="flex h-3 w-3 absolute -top-1 -right-1">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                      </span>
+                    {stats.unfulfilledCriticalNeeds > 0 && (
+                      <AlertTriangle
+                        className="text-rose-400 absolute animate-ping opacity-75"
+                        size={20}
+                      />
                     )}
+                    <AlertTriangle
+                      className="text-rose-600 relative z-10"
+                      size={20}
+                    />
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900">

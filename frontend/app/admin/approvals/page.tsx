@@ -7,6 +7,7 @@ import {
   approveOrgAdmin,
   rejectOrgAdmin,
   getApprovedOrgAdmins,
+  getRejectedOrgAdmins,
 } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Check, X, ChevronDown, ChevronUp } from "lucide-react";
@@ -36,11 +37,10 @@ interface ConfirmationDialog {
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected">("pending");
   const [pendingRequests, setPendingRequests] = useState<ApprovalRequest[]>([]);
-  const [approvedRequests, setApprovedRequests] = useState<ApprovalRequest[]>(
-    [],
-  );
+  const [approvedRequests, setApprovedRequests] = useState<ApprovalRequest[]>([]);
+  const [rejectedRequests, setRejectedRequests] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rejectingId, setRejectingId] = useState<number | null>(null);
@@ -65,12 +65,14 @@ export default function ApprovalsPage() {
     try {
       setLoading(true);
       setError("");
-      const [pending, approved] = await Promise.all([
+      const [pending, approved, rejected] = await Promise.all([
         getAdminApprovals(),
         getApprovedOrgAdmins(),
+        getRejectedOrgAdmins(),
       ]);
       setPendingRequests(sortByNewest(pending));
       setApprovedRequests(sortByNewest(approved));
+      setRejectedRequests(sortByNewest(rejected));
     } catch (err: unknown) {
       const error = err as Error;
       setError("Failed to load approval requests");
@@ -158,6 +160,9 @@ export default function ApprovalsPage() {
       setPendingRequests(
         pendingRequests.filter((r) => r.id !== confirmDialog.userId),
       );
+      if (result.user) {
+        setRejectedRequests([...rejectedRequests, result.user]);
+      }
       setRejectingId(null);
       setRejectionReason("");
       setConfirmDialog({
@@ -233,6 +238,16 @@ export default function ApprovalsPage() {
             >
               Approved ({approvedRequests.length})
             </button>
+            <button
+              onClick={() => setActiveTab("rejected")}
+              className={`px-1 py-4 font-medium text-sm border-b-2 transition ${
+                activeTab === "rejected"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Rejected ({rejectedRequests.length})
+            </button>
           </div>
         </div>
 
@@ -301,6 +316,34 @@ export default function ApprovalsPage() {
                             expandedCardId === req.id ? null : req.id,
                           )
                         }
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Rejected Requests Tab */}
+            {activeTab === "rejected" && (
+              <div>
+                {rejectedRequests.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg">
+                    <p className="text-gray-600">No rejected admin requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {rejectedRequests.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        req={req}
+                        isPending={false}
+                        isExpanded={expandedCardId === req.id}
+                        onToggleExpand={() =>
+                          setExpandedCardId(
+                            expandedCardId === req.id ? null : req.id,
+                          )
+                        }
+                        showReason={true}
                       />
                     ))}
                   </div>

@@ -50,67 +50,59 @@ export default function DonationsPage() {
 
     try {
       setError("");
-      const data = await getDonations();
-      // Sort donations by most recent completely
-      const sortedData = [...data].sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-      setDonations(sortedData);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch donations",
-      );
-      console.error("Error fetching donations:", err);
+
+      // Get all donations
+      const allDonations = await getDonations();
+
+      // ORG_ADMIN logic
+      const orgs = await getOrganizations();
+      if (orgs.length > 0) {
+        setOrganization(orgs[0]);
+
+        const nMap = new Map<number, any>();
+        orgs[0].sections?.forEach((section: any) => {
+          section.needs?.forEach((need: any) => {
+            nMap.set(need.id, need);
+          });
+        });
+        setNeedsMap(nMap);
+
+        const orgNeedIds = new Set<number>();
+        orgs[0].sections?.forEach((section: any) => {
+          section.needs?.forEach((need: any) => {
+            orgNeedIds.add(need.id);
+          });
+        });
+
+        const filteredDonations = allDonations.filter((d) =>
+          orgNeedIds.has(d.need_item),
+        );
+
+        // Sort donations by most recent completely
+        const sortedData = [...filteredDonations].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+
+        setDonations(sortedData);
+      } else {
+        setDonations([]);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch data");
+      console.error("Error fetching data:", err);
     }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      if (user.role !== "ORG_ADMIN") return;
-
-      try {
-        setIsLoading(true);
-        setError("");
-
-        // Get all donations
-        const allDonations = await getDonations();
-
-        // ORG_ADMIN logic
-        const orgs = await getOrganizations();
-        if (orgs.length > 0) {
-          setOrganization(orgs[0]);
-
-          const nMap = new Map<number, any>();
-          orgs[0].sections?.forEach((section: any) => {
-            section.needs?.forEach((need: any) => {
-              nMap.set(need.id, need);
-            });
-          });
-          setNeedsMap(nMap);
-
-          const orgNeedIds = new Set<number>();
-          orgs[0].sections?.forEach((section: any) => {
-            section.needs?.forEach((need: any) => {
-              orgNeedIds.add(need.id);
-            });
-          });
-
-          const filteredDonations = allDonations.filter((d) =>
-            orgNeedIds.has(d.need_item),
-          );
-          setDonations(filteredDonations);
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch donations");
-        console.error("Error fetching data:", err);
-      } finally {
-        setIsLoading(false);
-      }
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      await fetchDonations();
+      setIsLoading(false);
     };
-
-    fetchData();
+    if (user) {
+      loadInitialData();
+    }
   }, [user]);
 
   const handleConfirm = async (donationId: number) => {
@@ -408,6 +400,13 @@ export default function DonationsPage() {
                   </span>
                   <span className="col-span-2 text-gray-900">
                     {donation.government_officer_contact || "N/A"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                  <span className="text-gray-500 font-medium">Email</span>
+                  <span className="col-span-2 text-gray-900">
+                    {donation.government_email || "N/A"}
                   </span>
                 </div>
               </>
@@ -745,9 +744,9 @@ export default function DonationsPage() {
                                           ? donation.donor_name
                                           : donation.government_department}
                                       </div>
-                                      {donation.donor_type === "private" && (
+                                      {(donation.donor_type === "private" ? donation.donor_email : donation.government_email) && (
                                         <div className="text-gray-500 text-[10px]">
-                                          {donation.donor_email}
+                                          {donation.donor_type === "private" ? donation.donor_email : donation.government_email}
                                         </div>
                                       )}
                                     </div>
@@ -836,9 +835,9 @@ export default function DonationsPage() {
                                   ? donation.donor_name
                                   : donation.government_department}
                               </div>
-                              {donation.donor_type === "private" && (
+                              {(donation.donor_type === "private" ? donation.donor_email : donation.government_email) && (
                                 <div className="text-gray-600 text-xs">
-                                  {donation.donor_email}
+                                  {donation.donor_type === "private" ? donation.donor_email : donation.government_email}
                                 </div>
                               )}
                             </td>

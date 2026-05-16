@@ -11,9 +11,9 @@ export default function DonorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadDonors = useCallback(async () => {
+  const loadDonors = useCallback(async (isPolling = false) => {
     try {
-      setLoading(true);
+      if (!isPolling) setLoading(true);
       setError("");
       const donorList = await getDonors();
       setDonors(donorList);
@@ -22,13 +22,20 @@ export default function DonorsPage() {
       setError(error.message || "Failed to load donors list");
       console.error(error);
     } finally {
-      setLoading(false);
+      if (!isPolling) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (user && user.role === "ADMIN") {
       loadDonors();
+
+      // Auto-refresh data every 30 seconds for real-time updates
+      const interval = setInterval(() => {
+        loadDonors(true);
+      }, 30000);
+
+      return () => clearInterval(interval);
     } else {
       setLoading(false);
     }
@@ -51,7 +58,9 @@ export default function DonorsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Registered Donors</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+          Registered Donors
+        </h1>
 
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-600 rounded-md p-4">
@@ -64,22 +73,40 @@ export default function DonorsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Username
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Full Name
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Email
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Phone
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Joined Date
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Total Donations
                   </th>
                 </tr>
@@ -87,7 +114,10 @@ export default function DonorsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {donors.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-center text-sm text-gray-500"
+                    >
                       No donors found.
                     </td>
                   </tr>
@@ -101,16 +131,20 @@ export default function DonorsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {donor.first_name || donor.last_name 
-                            ? `${donor.first_name || ''} ${donor.last_name || ''}`.trim() 
+                          {donor.first_name || donor.last_name
+                            ? `${donor.first_name || ""} ${donor.last_name || ""}`.trim()
                             : "-"}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{donor.email}</div>
+                        <div className="text-sm text-gray-900">
+                          {donor.email}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{donor.phone_number || "-"}</div>
+                        <div className="text-sm text-gray-900">
+                          {donor.phone_number || "-"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(donor.date_joined).toLocaleDateString()}

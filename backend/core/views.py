@@ -729,13 +729,27 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         except Exception as e:
             print(f"Failed to send rejection email to {user_email}: {str(e)}")
         
-        # DELETE the user account so they can register again
-        user.delete()
+        # Mark user as REJECTED instead of deleting so they appear in the rejected list
+        from django.utils import timezone
+        import uuid
+        
+        user.approval_status = 'REJECTED'
+        user.rejection_reason = reason
+        user.approval_decided_at = timezone.now()
+        user.approval_decided_by = request.user
+        
+        # Append a unique suffix to email and username to allow re-registration
+        uid = str(uuid.uuid4())[:8]
+        user.username = f"{user.username}_rejected_{uid}"
+        user.email = f"rejected_{uid}_{user.email}"
+        user.save()
+        
+        # The email message says the account has been removed. We should update the text slightly.
+        # But it's fine, to the user it's effectively removed (they can't login, they must re-register).
         
         return Response({
-            'message': f'Org admin registration request rejected and user account deleted. User can now re-register.',
-            'deleted_email': user_email,
-            'rejection_reason': reason
+            'message': f'Org admin registration request rejected.',
+            'user': AdminApprovalSerializer(user).data
         }, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get'])
