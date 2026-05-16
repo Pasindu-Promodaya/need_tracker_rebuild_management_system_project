@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { 
   Organization, getOrganizations, 
   NeedItem, getNeeds,
-  Donation, getDonations
+  getDonations
 } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import StatsCard from "@/components/StatsCard";
@@ -19,7 +19,6 @@ import {
   DollarSign,
   FileText,
   BarChart3,
-  ArrowRight,
   PieChart
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -45,7 +44,7 @@ export default function OrgAdminDashboard() {
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [, setError] = useState("");
 
   useEffect(() => {
     if (!authLoading && user?.role !== "ORG_ADMIN") {

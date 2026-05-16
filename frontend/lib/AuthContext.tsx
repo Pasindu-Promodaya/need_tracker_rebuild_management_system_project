@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const currentUser = await getCurrentUser();
           setUser(currentUser);
         }
-      } catch (err) {
+      } catch {
         // Token might be invalid
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');

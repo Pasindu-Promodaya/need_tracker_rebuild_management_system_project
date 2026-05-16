@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Organization,
   getOrganizations,
@@ -22,10 +21,8 @@ import EditNeedModal from "@/components/EditNeedModal";
 import EditSectionModal from "@/components/EditSectionModal";
 
 export default function OrganizationsPage() {
-  const router = useRouter();
   const { authorized, isLoading: authLoading } = useAdminGuard();
   const { user } = useAuth();
-  const isAdmin = authorized;
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
@@ -51,7 +48,7 @@ export default function OrganizationsPage() {
     null,
   );
 
-  const fetchOrganizations = useCallback(async () => {
+  const fetchOrganizations = async () => {
     try {
       const orgs = await getOrganizations();
       setOrganizations(orgs);
@@ -71,11 +68,11 @@ export default function OrganizationsPage() {
           setSelectedOrgId(orgs[0].id);
         }
       }
-    } catch (err) {
+    } catch {
       setOrganizations([]);
       setOrganization(null);
     }
-  }, [user?.role]);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -85,7 +82,8 @@ export default function OrganizationsPage() {
       setLoading(false);
     };
     loadData();
-  }, [authorized, fetchOrganizations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authorized]);
 
   const findNeedById = (needId: number): NeedItem | null => {
     if (!organization?.sections) return null;
@@ -108,13 +106,6 @@ export default function OrganizationsPage() {
       alert("Failed to delete need. Please try again.");
     } finally {
       setDeletingNeed(false);
-    }
-  }
-
-  async function handleDeleteSection(sectionId: number) {
-    const section = organization?.sections?.find((s) => s.id === sectionId);
-    if (section) {
-      setDeleteSectionConfirm(section);
     }
   }
 

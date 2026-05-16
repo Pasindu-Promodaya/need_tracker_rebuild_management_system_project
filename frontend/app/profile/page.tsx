@@ -33,7 +33,8 @@ export default function ProfilePage() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
-    if (user) {
+    let isMounted = true;
+    if (user && isMounted) {
       setProfileForm({
         first_name: user.first_name || "",
         last_name: user.last_name || "",
@@ -41,6 +42,9 @@ export default function ProfilePage() {
         phone_number: user.phone_number || "",
       });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const handleProfileSave = async (e: React.FormEvent) => {

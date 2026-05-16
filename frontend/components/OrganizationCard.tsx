@@ -51,12 +51,6 @@ export default function OrganizationCard({
 }: OrganizationCardProps) {
   const type = orgTypeConfig[organization.org_type || "OTHER"];
 
-  const allNeeds =
-    organization.sections?.reduce(
-      (acc, section) => acc + (section.needs?.length || 0),
-      0,
-    ) || 0;
-
   const unfulfilledNeeds =
     organization.sections?.reduce(
       (acc, section) =>
@@ -74,16 +68,6 @@ export default function OrganizationCard({
           (n) =>
             n.priority === "CRITICAL" &&
             n.quantity_received < n.quantity_required,
-        ).length || 0),
-      0,
-    ) || 0;
-
-  const fulfilledNeeds =
-    organization.sections?.reduce(
-      (acc, section) =>
-        acc +
-        (section.needs?.filter(
-          (n) => n.quantity_received >= n.quantity_required,
         ).length || 0),
       0,
     ) || 0;

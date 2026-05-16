@@ -20,7 +20,6 @@ const orgTypeConfig: Record<string, { label: string; gradient: string }> = {
 
 export default function OrganizationDetailPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN" || user?.role === "ORG_ADMIN";
   const isOrgAdmin = user?.role === "ORG_ADMIN";
   const params = useParams();
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -100,12 +99,6 @@ export default function OrganizationDetailPage() {
       </div>
     );
   }
-
-  const totalNeeds =
-    organization.sections?.reduce(
-      (acc, section) => acc + (section.needs?.length || 0),
-      0,
-    ) || 0;
 
   const typeConfig = orgTypeConfig[organization.org_type || "OTHER"];
 

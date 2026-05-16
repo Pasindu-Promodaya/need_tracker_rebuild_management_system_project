@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { NeedItem, Donation } from "@/lib/api";
+import { NeedItem } from "@/lib/api";
 import { Loader2, X } from "lucide-react";
 
 export interface DonationFormData {
@@ -62,7 +62,6 @@ export default function DonateModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 

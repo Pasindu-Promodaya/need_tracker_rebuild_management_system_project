@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { search, SearchResult, Organization, NeedItem } from "@/lib/api";
+import { search, SearchResult } from "@/lib/api";
 import NeedCard from "@/components/NeedCard";
 import OrganizationCard from "@/components/OrganizationCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Search, ChevronRight } from "lucide-react";
+import { Search } from "lucide-react";
 
 export default function SearchContent() {
   const searchParams = useSearchParams();
