@@ -13,6 +13,16 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'role', 'phone_number', 'first_name', 'last_name', 'approval_status', 'requested_organization']
         read_only_fields = ['role', 'approval_status', 'requested_organization']
 
+class DonorUserSerializer(serializers.ModelSerializer):
+    donations_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'phone_number', 'date_joined', 'donations_count']
+
+    def get_donations_count(self, obj):
+        return obj.donations.count()
+
 class UpdateProfileSerializer(serializers.ModelSerializer):
     current_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     new_password = serializers.CharField(write_only=True, required=False, allow_blank=True)

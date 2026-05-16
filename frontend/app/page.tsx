@@ -137,14 +137,11 @@ export default function Home() {
             {/* Right Column: Featured Image Card */}
             <div className="relative animate-fade-in group lg:ml-auto">
               <div className="absolute -inset-4 bg-white/10 rounded-[32px] blur-2xl group-hover:bg-white/20 transition-all duration-500"></div>
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20">
-                <Image
-                  src="/images/hero-donation.jpg"
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 aspect-video bg-slate-800 flex items-center justify-center">
+                <img
+                  src="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=800&q=80"
                   alt="Hospital Donation Need"
-                  width={800}
-                  height={500}
-                  className="w-full h-auto object-cover"
-                  priority
+                  className="w-full h-full object-cover"
                 />
                 {/* Urgent Need Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-8 bg-linear-to-t from-slate-900 via-slate-900/80 to-transparent">

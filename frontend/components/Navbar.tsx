@@ -105,7 +105,10 @@ export default function Navbar() {
         { href: "/organizations", label: "Organizations" },
         { href: "/needs", label: "All Needs" },
         ...(user?.role === "ADMIN"
-          ? [{ href: "/admin/approvals", label: "Approvals" }]
+          ? [
+              { href: "/admin/approvals", label: "Approvals" },
+              { href: "/admin/donors", label: "Donors" },
+            ]
           : []),
         ...(user?.role === "ORG_ADMIN"
           ? [
@@ -207,12 +210,20 @@ export default function Navbar() {
                       </>
                     )}
                     {user.role === "ADMIN" && (
-                      <Link
-                        href="/admin/approvals"
-                        className={`text-sm font-semibold transition-colors ${pathname === "/admin/approvals" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
-                      >
-                        Approvals
-                      </Link>
+                      <>
+                        <Link
+                          href="/admin/approvals"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/admin/approvals" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Approvals
+                        </Link>
+                        <Link
+                          href="/admin/donors"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/admin/donors" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Donors
+                        </Link>
+                      </>
                     )}
                   </>
                 ) : (

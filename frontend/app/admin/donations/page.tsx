@@ -273,9 +273,9 @@ export default function DonationsPage() {
     const needName = needsMap.get(donation.need_item)?.name || "Unknown Need";
 
     return (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-in">
-          <div className="flex justify-between items-center mb-6 border-b pb-4">
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-8">
+        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-full flex flex-col animate-in">
+          <div className="flex justify-between items-center p-6 border-b shrink-0">
             <h3 className="text-xl font-bold text-gray-900">
               Donation Details
             </h3>
@@ -289,11 +289,20 @@ export default function DonationsPage() {
             </button>
           </div>
 
-          <div className="space-y-4 text-sm">
+          <div className="p-6 overflow-y-auto flex-1 space-y-4 text-sm">
             <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
               <span className="text-gray-500 font-medium">Need Item</span>
               <span className="col-span-2 text-gray-900">{needName}</span>
             </div>
+
+            {needsMap.get(donation.need_item)?.section_detail?.name && (
+              <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                <span className="text-gray-500 font-medium">Section</span>
+                <span className="col-span-2 text-gray-900">
+                  {needsMap.get(donation.need_item)?.section_detail?.name}
+                </span>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
               <span className="text-gray-500 font-medium">Quantity</span>
@@ -425,7 +434,7 @@ export default function DonationsPage() {
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end">
+          <div className="p-6 border-t shrink-0 flex justify-end">
             <button
               onClick={() => setViewDialog(null)}
               className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition"
@@ -618,7 +627,16 @@ export default function DonationsPage() {
                       Need Item
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
-                      Quantity
+                      Section
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Required Quantity
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Received Quantity
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Requested Quantity
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                       Donor Type
@@ -669,6 +687,22 @@ export default function DonationsPage() {
                                   {firstDonation.need_item_detail?.name ||
                                     `Need ${firstDonation.need_item}`}
                                 </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-600">
+                                {needsMap.get(firstDonation.need_item)
+                                  ?.section_detail?.name || "-"}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                                {needsMap.get(firstDonation.need_item)
+                                  ?.quantity_required
+                                  ? `${needsMap.get(firstDonation.need_item)?.quantity_required} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
+                                  : "-"}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-green-700 font-medium">
+                                {needsMap.get(firstDonation.need_item)
+                                  ?.quantity_received !== undefined
+                                  ? `${needsMap.get(firstDonation.need_item)?.quantity_received} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
+                                  : "-"}
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-600">
                                 <div className="space-y-2">
@@ -768,6 +802,22 @@ export default function DonationsPage() {
                                 {donation.need_item_detail?.name ||
                                   `Need ${donation.need_item}`}
                               </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {needsMap.get(donation.need_item)?.section_detail
+                                ?.name || "-"}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                              {needsMap.get(donation.need_item)
+                                ?.quantity_required
+                                ? `${needsMap.get(donation.need_item)?.quantity_required} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
+                                : "-"}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-green-700 font-medium">
+                              {needsMap.get(donation.need_item)
+                                ?.quantity_received !== undefined
+                                ? `${needsMap.get(donation.need_item)?.quantity_received} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
+                                : "-"}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
                               {donation.quantity}{" "}

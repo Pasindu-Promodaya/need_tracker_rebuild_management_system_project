@@ -39,6 +39,8 @@ export default function AdminDashboard() {
     sections: 0,
     totalNeeds: 0,
     criticalNeeds: 0,
+    activeNeeds: 0,
+    unfulfilledCriticalNeeds: 0,
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,14 +76,24 @@ export default function AdminDashboard() {
 
         const critical = allNeeds.filter((n) => n.priority === "CRITICAL");
 
+        const unfulfilledNeeds = allNeeds.filter(
+          (n) => n.quantity_received < n.quantity_required,
+        );
+
+        const unfulfilledCritical = critical.filter(
+          (n) => n.quantity_received < n.quantity_required,
+        );
+
         setStats({
           organizations: orgs.length,
           sections: sections.length,
           totalNeeds: allNeeds.length,
           criticalNeeds: critical.length,
+          activeNeeds: unfulfilledNeeds.length,
+          unfulfilledCriticalNeeds: unfulfilledCritical.length,
         });
 
-        setCriticalNeeds(critical.slice(0, 3)); // Show top 3 critical
+        setCriticalNeeds(unfulfilledCritical.slice(0, 3)); // Show top 3 critical unfulfilled
       } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : "Failed to fetch dashboard data",
@@ -171,7 +183,6 @@ export default function AdminDashboard() {
               subtext="Urgent attention required"
               icon={<AlertTriangle className="text-rose-600" size={20} />}
               iconBg="bg-rose-50"
-              isWarning={stats.criticalNeeds > 0}
             />
           </div>
         </div>
@@ -182,16 +193,22 @@ export default function AdminDashboard() {
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center relative">
                     <AlertTriangle className="text-rose-600" size={20} />
+                    {stats.criticalNeeds > 0 && (
+                      <span className="flex h-3 w-3 absolute -top-1 -right-1">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                      </span>
+                    )}
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900">
                       Critical Needs Requiring Attention
                     </h3>
                     <p className="text-xs text-slate-500 font-medium">
-                      {stats.criticalNeeds} urgent items • Immediate assistance
-                      needed
+                      {stats.unfulfilledCriticalNeeds} urgent items • Immediate
+                      assistance needed
                     </p>
                   </div>
                 </div>
@@ -199,7 +216,7 @@ export default function AdminDashboard() {
                   href="/needs"
                   className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 group"
                 >
-                  View All ({stats.totalNeeds}){" "}
+                  View All ({stats.activeNeeds}){" "}
                   <ArrowRight
                     size={14}
                     className="group-hover:translate-x-0.5 transition-transform"
@@ -291,6 +308,20 @@ export default function AdminDashboard() {
                 icon={<Building2 size={20} />}
                 href="/organizations"
                 color="indigo"
+              />
+              <ControlTile
+                label="Manage Approvals"
+                desc="Review and approve or reject organization admin registrations."
+                icon={<AlertTriangle size={20} />}
+                href="/admin/approvals"
+                color="blue"
+              />
+              <ControlTile
+                label="Manage Donors"
+                desc="View and manage registered donors and their involvement."
+                icon={<Users size={20} />}
+                href="/admin/donors"
+                color="violet"
               />
               <ControlTile
                 label="Review Critical Needs"

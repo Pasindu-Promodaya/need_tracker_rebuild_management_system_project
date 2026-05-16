@@ -22,7 +22,8 @@ export default function NeedsContent() {
 
   const fetchNeeds = async () => {
     try {
-      const data = await getNeeds(priorityFilter || undefined, true);
+      // Fetch all needs to ensure stats correlate to total unfulfilled needs
+      const data = await getNeeds(undefined, true);
       setNeeds(data);
     } catch (error) {
       console.error("Failed to fetch needs:", error);
@@ -35,11 +36,17 @@ export default function NeedsContent() {
       await fetchNeeds();
       setLoading(false);
     }
+    // Fetch only once so tab switches are fast and stats don't change
     fetchNeedsWithLoader();
-  }, [priorityFilter]);
+  }, []);
+
+  // Filter locally
+  const filteredNeeds = priorityFilter
+    ? needs.filter((n) => n.priority === priorityFilter)
+    : needs;
 
   // Sort needs
-  const sortedNeeds = [...needs].sort((a, b) => {
+  const sortedNeeds = [...filteredNeeds].sort((a, b) => {
     if (sortBy === "priority") {
       const priorityOrder = { CRITICAL: 0, ESSENTIAL: 1, NICE: 2 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];

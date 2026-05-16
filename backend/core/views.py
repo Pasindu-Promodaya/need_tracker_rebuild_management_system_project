@@ -24,6 +24,7 @@ from .serializers import (
     OrgAdminRegisterSerializer,
     AdminApprovalSerializer,
     UserSerializer,
+    DonorUserSerializer,
     UpdateProfileSerializer
 )
 from .serializers_jwt import get_tokens_for_user
@@ -529,6 +530,16 @@ class DocumentUploadViewSet(viewsets.ModelViewSet):
                 'message': 'Failed to create needs',
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DonorUserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows admins to view donor users.
+    """
+    serializer_class = DonorUserSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        return User.objects.filter(role='DONOR').order_by('-date_joined')
 
 # 4.5 Admin Approval ViewSet (for managing org admin approval requests)
 class AdminApprovalViewSet(viewsets.ViewSet):

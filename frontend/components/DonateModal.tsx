@@ -156,7 +156,15 @@ export default function DonateModal({
             <h2 className="text-2xl font-bold text-gray-900">
               Make a Donation
             </h2>
-            <p className="text-gray-600 mt-1">{needItem.name}</p>
+            <p className="text-gray-800 font-medium mt-1">{needItem.name}</p>
+            {needItem.section_detail && (
+              <p className="text-gray-500 text-sm mt-0.5">
+                {needItem.section_detail.organization_name}{" "}
+                {needItem.section_detail.name
+                  ? `• ${needItem.section_detail.name}`
+                  : ""}
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}

@@ -14,6 +14,17 @@ export interface User {
   last_name?: string;
 }
 
+export interface DonorUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number: string;
+  date_joined: string;
+  donations_count: number;
+}
+
 export interface AuthResponse {
   access: string;
   refresh: string;
@@ -539,3 +550,9 @@ export async function search(
 
   return response.json();
 }
+
+// Donors
+export const getDonors = async () => {
+  const response = await fetchAPI<any>("/donors/");
+  return (response.results || response) as DonorUser[];
+};
