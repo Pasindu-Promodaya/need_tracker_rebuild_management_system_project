@@ -46,15 +46,9 @@ export default function LoginContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
     const tab = (searchParams.get("tab") as "login" | "register" | "org-admin") || "login";
-    if (isMounted) {
-      setActiveTab(tab);
-      setError(null);
-    }
-    return () => {
-      isMounted = false;
-    };
+    setActiveTab(tab);
+    setError(null);
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
