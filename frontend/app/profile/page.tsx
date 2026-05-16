@@ -34,11 +34,21 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      setProfileForm({
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
-        email: user.email || "",
-        phone_number: user.phone_number || "",
+      setProfileForm((prevForm) => {
+        if (
+          prevForm.first_name !== (user.first_name || "") ||
+          prevForm.last_name !== (user.last_name || "") ||
+          prevForm.email !== (user.email || "") ||
+          prevForm.phone_number !== (user.phone_number || "")
+        ) {
+          return {
+            first_name: user.first_name || "",
+            last_name: user.last_name || "",
+            email: user.email || "",
+            phone_number: user.phone_number || "",
+          };
+        }
+        return prevForm;
       });
     }
   }, [user]);

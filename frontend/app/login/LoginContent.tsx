@@ -47,7 +47,7 @@ export default function LoginContent() {
 
   useEffect(() => {
     const tab = (searchParams.get("tab") as "login" | "register" | "org-admin") || "login";
-    setActiveTab(tab);
+    setActiveTab((prev) => (prev !== tab ? tab : prev));
     setError(null);
   }, [searchParams]);
 
