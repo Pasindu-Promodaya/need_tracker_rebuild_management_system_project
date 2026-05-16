@@ -46,7 +46,7 @@ export default function LoginContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    const tab = (searchParams.get("tab") as any) || "login";
+    const tab = (searchParams.get("tab") as "login" | "register" | "org-admin") || "login";
     setActiveTab(tab);
     setError(null);
   }, [searchParams]);
@@ -109,8 +109,8 @@ export default function LoginContent() {
         setSelectedOrgType("");
         setActiveTab("login");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }

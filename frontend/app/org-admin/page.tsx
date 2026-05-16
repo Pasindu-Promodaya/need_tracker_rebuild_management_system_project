@@ -39,9 +39,9 @@ export default function OrgAdminDashboard() {
   const [analytics, setAnalytics] = useState({
     fulfillmentRate: 0,
     donationRate: 0,
-    sectionMetrics: [] as any[],
-    monthlyData: [] as any[],
-    yearlyData: [] as any[]
+    sectionMetrics: [] as { label: string; value: number | string; total?: number; percentage?: number; status?: "critical" | "warning" | "success" | "neutral" }[],
+    monthlyData: [] as { name: string; donations: number; fulfillment: number }[],
+    yearlyData: [] as { name: string; donations: number; fulfillment: number }[]
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,7 +97,7 @@ export default function OrgAdminDashboard() {
             value: received,
             total: required,
             percentage,
-            status: percentage > 80 ? "success" : percentage < 30 ? "critical" : "warning"
+            status: (percentage > 80 ? "success" : percentage < 30 ? "critical" : "warning") as "success" | "warning" | "critical" | "neutral"
           };
         });
 
@@ -173,7 +173,7 @@ export default function OrgAdminDashboard() {
               <span className="text-slate-400 text-sm">— {organization.name}</span>
             </div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Organization Dashboard</h1>
-            <p className="text-slate-500 mt-1">Manage your organization's needs and monitor impact</p>
+            <p className="text-slate-500 mt-1">Manage your organization&apos;s needs and monitor impact</p>
           </div>
           <div className="flex items-center gap-3">
              <Link href="/documents" className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-600/20"><FileText size={18} />Upload Document</Link>
@@ -275,8 +275,8 @@ export default function OrgAdminDashboard() {
   );
 }
 
-function ControlTile({ label, desc, icon, href, color }: { label: string, desc: string, icon: any, href: string, color: string }) {
-  const colorMap: any = {
+function ControlTile({ label, desc, icon, href, color }: { label: string, desc: string, icon: React.ReactNode, href: string, color: string }) {
+  const colorMap: Record<string, string> = {
     blue: "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20",
     indigo: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20",
     rose: "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20",

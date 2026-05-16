@@ -349,7 +349,7 @@ export default function Home() {
                   </svg>
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900">
-                  We're a hospital
+                  We&apos;re a hospital
                 </h2>
                 <p className="text-sm text-slate-500 leading-relaxed">
                   Join NeedTracker to publish your needs, manage donations and

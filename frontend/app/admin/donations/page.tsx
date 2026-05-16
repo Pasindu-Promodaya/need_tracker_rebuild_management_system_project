@@ -22,20 +22,20 @@ export default function DonationsPage() {
   const [filter, setFilter] = useState<string>("PENDING");
   const [confirming, setConfirming] = useState<number | null>(null);
   const [cancelling, setCancelling] = useState<number | null>(null);
-  const [needsMap, setNeedsMap] = useState<Map<number, any>>(new Map());
-  const [organization, setOrganization] = useState<any>(null);
+  const [needsMap, setNeedsMap] = useState<Map<number, { name?: string }>>(new Map());
+  const [organization, setOrganization] = useState<unknown>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     type: "confirm" | "cancel" | null;
     donationId: number | null;
-    donationDetails: any | null;
+    donationDetails: Donation | null;
   }>({
     isOpen: false,
     type: null,
     donationId: null,
     donationDetails: null,
   });
-  const [viewDialog, setViewDialog] = useState<any>(null);
+  const [viewDialog, setViewDialog] = useState<Donation | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -82,17 +82,17 @@ export default function DonationsPage() {
         if (orgs.length > 0) {
           setOrganization(orgs[0]);
 
-          const nMap = new Map<number, any>();
-          orgs[0].sections?.forEach((section: any) => {
-            section.needs?.forEach((need: any) => {
+          const nMap = new Map<number, { name?: string }>();
+          orgs[0].sections?.forEach((section: { needs?: { id: number; name?: string }[] }) => {
+            section.needs?.forEach((need: { id: number; name?: string }) => {
               nMap.set(need.id, need);
             });
           });
           setNeedsMap(nMap);
 
           const orgNeedIds = new Set<number>();
-          orgs[0].sections?.forEach((section: any) => {
-            section.needs?.forEach((need: any) => {
+          orgs[0].sections?.forEach((section: { needs?: { id: number }[] }) => {
+            section.needs?.forEach((need: { id: number }) => {
               orgNeedIds.add(need.id);
             });
           });
@@ -102,8 +102,8 @@ export default function DonationsPage() {
           );
           setDonations(filteredDonations);
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch donations");
+      } catch (err: unknown) {
+        setError((err instanceof Error ? err.message : "An error occurred") || "Failed to fetch donations");
         console.error("Error fetching data:", err);
       } finally {
         setIsLoading(false);
@@ -119,7 +119,7 @@ export default function DonationsPage() {
       isOpen: true,
       type: "confirm",
       donationId,
-      donationDetails: donation,
+      donationDetails: donation || null,
     });
   };
 
@@ -136,9 +136,9 @@ export default function DonationsPage() {
         donationDetails: null,
       });
       await fetchDonations();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.detail || err.message || err.status || "Failed to confirm donation",
+        (err as any)?.detail || (err instanceof Error ? err.message : "An error occurred") || (err as any)?.status || "Failed to confirm donation",
       );
     } finally {
       setConfirming(null);
@@ -151,7 +151,7 @@ export default function DonationsPage() {
       isOpen: true,
       type: "cancel",
       donationId,
-      donationDetails: donation,
+      donationDetails: donation || null,
     });
   };
 
@@ -168,9 +168,9 @@ export default function DonationsPage() {
         donationDetails: null,
       });
       await fetchDonations();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.detail || err.message || err.status || "Failed to cancel donation",
+        (err as any)?.detail || (err instanceof Error ? err.message : "An error occurred") || (err as any)?.status || "Failed to cancel donation",
       );
     } finally {
       setCancelling(null);
@@ -298,7 +298,7 @@ export default function DonationsPage() {
             <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
               <span className="text-gray-500 font-medium">Quantity</span>
               <span className="col-span-2 text-gray-900">
-                {donation.quantity} {donation.units || "UNIT"}
+                {donation.quantity} {donation.need_item_detail?.unit || "UNIT"}
               </span>
             </div>
 

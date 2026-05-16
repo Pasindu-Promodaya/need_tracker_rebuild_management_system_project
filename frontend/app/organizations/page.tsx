@@ -670,8 +670,8 @@ export default function OrganizationsPage() {
                 Delete Need
               </h3>
               <p className="text-gray-600 mb-6">
-                Are you sure you want to delete "
-                <strong>{deleteNeedConfirm.name}</strong>"?
+                Are you sure you want to delete &quot;
+                <strong>{deleteNeedConfirm.name}</strong>&quot;?
               </p>
               <div className="flex justify-end gap-3">
                 <button

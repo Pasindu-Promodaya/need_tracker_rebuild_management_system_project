@@ -69,8 +69,8 @@ export default function ApprovalsPage() {
         getAdminApprovals(),
         getApprovedOrgAdmins(),
       ]);
-      setPendingRequests(sortByNewest(pending));
-      setApprovedRequests(sortByNewest(approved));
+      setPendingRequests(sortByNewest(pending as ApprovalRequest[]));
+      setApprovedRequests(sortByNewest(approved as ApprovalRequest[]));
     } catch (err: unknown) {
       const error = err as Error;
       setError("Failed to load approval requests");
@@ -100,7 +100,7 @@ export default function ApprovalsPage() {
     if (!confirmDialog.userId) return;
 
     try {
-      const result = await approveOrgAdmin(confirmDialog.userId);
+      const result = await approveOrgAdmin(confirmDialog.userId) as { user: ApprovalRequest };
       setPendingRequests(
         pendingRequests.filter((r) => r.id !== confirmDialog.userId),
       );
@@ -112,8 +112,8 @@ export default function ApprovalsPage() {
         userName: "",
       });
       alert("Admin approved successfully!");
-    } catch (err: any) {
-      setError(err.message || "Failed to approve");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to approve");
       setConfirmDialog({
         isOpen: false,
         type: null,
@@ -167,8 +167,8 @@ export default function ApprovalsPage() {
         userName: "",
       });
       alert("Request rejected successfully!");
-    } catch (err: any) {
-      setError(err.message || "Failed to reject");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to reject");
       setConfirmDialog({
         isOpen: false,
         type: null,
