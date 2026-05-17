@@ -779,6 +779,25 @@ class DonationViewSet(viewsets.ModelViewSet):
     queryset = Donation.objects.select_related('donor', 'need_item').all()
     serializer_class = DonationSerializer
     
+    def get_queryset(self):
+        """Filter donations based on user role and organization ownership"""
+        queryset = Donation.objects.select_related('donor', 'need_item').all()
+        user = self.request.user
+        
+        if not user.is_authenticated:
+            return Donation.objects.none()
+            
+        if hasattr(user, 'role') and user.role == 'ADMIN':
+            return queryset
+            
+        if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
+            return queryset.filter(need_item__section__organization__admin_user=user)
+            
+        if hasattr(user, 'role') and user.role == 'DONOR':
+            return queryset.filter(donor=user)
+            
+        return Donation.objects.none()
+
     def get_permissions(self):
         """Allow authenticated users to create donations and view their own, admins can manage all"""
         if self.action in ['create', 'list', 'retrieve']:
@@ -791,6 +810,83 @@ class DonationViewSet(viewsets.ModelViewSet):
             serializer.save(donor=self.request.user)
         else:
             serializer.save()
+
+    def _send_donation_email(self, donation, action):
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        # Get donor email and name
+        if donation.donor:
+            donor_email = donation.donor.email
+            donor_name = donation.donor.first_name or donation.donor.username
+        elif donation.donor_type == 'private':
+            donor_email = donation.donor_email
+            donor_name = donation.donor_name
+        elif donation.donor_type == 'government':
+            donor_email = donation.government_email
+            donor_name = donation.government_officer_name or donation.government_department
+        else:
+            return
+            
+        if not donor_email:
+            return
+            
+        need_name = donation.need_item.name
+        section_name = donation.need_item.section.name
+        org_name = donation.need_item.section.organization.name
+        quantity = donation.quantity
+        unit = donation.need_item.unit
+        
+        if action == 'confirm':
+            subject = "Donation Confirmed: {} – NeedTracker".format(org_name)
+            message = (
+                "Dear {donor_name},\n\n"
+                "Great news! Your donation pledge of {quantity} {unit}(s) of '{need_name}' for {section_name} "
+                "has been confirmed by the administrators at {org_name}.\n\n"
+                "They are now expecting your contribution. Please arrange the delivery "
+                "as per the guidelines provided by the organization.\n\n"
+                "Thank you for your generous support. Your contribution makes a real difference!\n\n"
+                "— The NeedTracker Team"
+            ).format(
+                donor_name=donor_name,
+                quantity=quantity,
+                unit=unit,
+                need_name=need_name,
+                section_name=section_name,
+                org_name=org_name
+            )
+        elif action == 'cancel':
+            subject = "Donation Cancelled: {} – NeedTracker".format(org_name)
+            message = (
+                "Dear {donor_name},\n\n"
+                "We wanted to inform you that your donation pledge of {quantity} {unit}(s) of '{need_name}' for {section_name} "
+                "has been cancelled by the administrators at {org_name}.\n\n"
+                "This may happen if the need has already been fulfilled by other donors, or if the "
+                "organization's requirements have changed.\n\n"
+                "We truly appreciate your willingness to help. Please check the NeedTracker platform "
+                "for other critical needs that you can support.\n\n"
+                "— The NeedTracker Team"
+            ).format(
+                donor_name=donor_name,
+                quantity=quantity,
+                unit=unit,
+                need_name=need_name,
+                section_name=section_name,
+                org_name=org_name
+            )
+        else:
+            return
+            
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[donor_email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Failed to send donation {action} email to {donor_email}: {str(e)}")
     
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):
@@ -815,6 +911,9 @@ class DonationViewSet(viewsets.ModelViewSet):
                     status='CONFIRMED'
                 ).update(status='FULFILLED')
             
+            # Send confirmation email to donor
+            self._send_donation_email(donation, 'confirm')
+            
             return Response({
                 'status': 'Donation confirmed', 
                 'donation_status': donation.status,
@@ -830,6 +929,10 @@ class DonationViewSet(viewsets.ModelViewSet):
         if donation.status == 'PENDING':
             donation.status = 'CANCELLED'
             donation.save()
+            
+            # Send cancellation email to donor
+            self._send_donation_email(donation, 'cancel')
+            
             return Response({'status': 'Donation cancelled'}, status=status.HTTP_200_OK)
         return Response({'status': 'Only pending donations can be cancelled'}, status=status.HTTP_400_BAD_REQUEST)
 

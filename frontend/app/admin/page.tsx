@@ -11,6 +11,7 @@ import {
   getDonations,
   Section,
   getSections,
+  getDonors,
 } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
@@ -41,6 +42,8 @@ export default function AdminDashboard() {
     criticalNeeds: 0,
     activeNeeds: 0,
     unfulfilledCriticalNeeds: 0,
+    activeDonors: 0,
+    successfulDeliveriesRate: 0,
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,10 +71,12 @@ export default function AdminDashboard() {
         setIsLoading(true);
         setError("");
 
-        const [orgs, sections, allNeeds] = await Promise.all([
+        const [orgs, sections, allNeeds, allDonations, allDonors] = await Promise.all([
           getOrganizations(),
           getSections(),
           getNeeds(),
+          getDonations(),
+          getDonors(),
         ]);
 
         const critical = allNeeds.filter((n) => n.priority === "CRITICAL");
@@ -82,7 +87,14 @@ export default function AdminDashboard() {
 
         const unfulfilledCritical = critical.filter(
           (n) => n.quantity_received < n.quantity_required,
-        );
+        ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        // Calculate dynamic delivery rate
+        const validDonations = allDonations.filter(d => d.status !== 'CANCELLED');
+        const fulfilledDonations = allDonations.filter(d => d.status === 'FULFILLED');
+        const deliveryRate = validDonations.length > 0 
+          ? Math.round((fulfilledDonations.length / validDonations.length) * 100) 
+          : 0;
 
         setStats({
           organizations: orgs.length,
@@ -91,9 +103,11 @@ export default function AdminDashboard() {
           criticalNeeds: critical.length,
           activeNeeds: unfulfilledNeeds.length,
           unfulfilledCriticalNeeds: unfulfilledCritical.length,
+          activeDonors: allDonors.length,
+          successfulDeliveriesRate: deliveryRate,
         });
 
-        setCriticalNeeds(unfulfilledCritical.slice(0, 3)); // Show top 3 critical unfulfilled
+        setCriticalNeeds(unfulfilledCritical.slice(0, 2)); // Show top 2 critical unfulfilled
       } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : "Failed to fetch dashboard data",
@@ -166,7 +180,7 @@ export default function AdminDashboard() {
             <StatCard
               label="Sections"
               value={stats.sections}
-              subtext="Departments tracked"
+              subtext="Sections tracked"
               icon={<Layers className="text-purple-600" size={20} />}
               iconBg="bg-purple-50"
             />
@@ -267,7 +281,7 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">
                         Donors Active
                       </p>
-                      <p className="text-xl font-bold">4,500+</p>
+                      <p className="text-xl font-bold">{stats.activeDonors}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -278,7 +292,7 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">
                         Successful Deliveries
                       </p>
-                      <p className="text-xl font-bold">98%</p>
+                      <p className="text-xl font-bold">{stats.successfulDeliveriesRate}%</p>
                     </div>
                   </div>
                 </div>
@@ -307,7 +321,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <ControlTile
                 label="Manage Organizations"
-                desc="Create, update, and monitor organizations across the network."
+                desc="View and delete organizations across the network."
                 icon={<Building2 size={20} />}
                 href="/organizations"
                 color="indigo"
@@ -320,8 +334,8 @@ export default function AdminDashboard() {
                 color="blue"
               />
               <ControlTile
-                label="Manage Donors"
-                desc="View and manage registered donors and their involvement."
+                label="View Donors"
+                desc="View registered donors and their involvement."
                 icon={<Users size={20} />}
                 href="/admin/donors"
                 color="violet"
@@ -410,6 +424,7 @@ function CriticalNeedRow({ need }: { need: NeedItem }) {
           <h4 className="font-bold text-slate-900 text-sm">{need.name}</h4>
           <p className="text-xs text-slate-500 font-medium">
             {need.section_detail?.organization_name}
+            {need.section_detail?.name ? ` • ${need.section_detail.name}` : ""}
           </p>
         </div>
         <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded text-[10px] font-bold uppercase tracking-wider border border-rose-200">
@@ -473,6 +488,8 @@ function ControlTile({
     indigo:
       "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20",
     rose: "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20",
+    violet:
+      "bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20",
     emerald:
       "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20",
     amber:

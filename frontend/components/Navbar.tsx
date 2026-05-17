@@ -290,6 +290,12 @@ export default function Navbar() {
                   >
                     Become a Donor
                   </Link>
+                  <Link
+                    href="/login?tab=org-admin"
+                    className="text-sm font-bold text-blue-600 bg-white border-2 border-blue-600 hover:bg-blue-50 px-6 py-3 rounded-lg shadow-lg shadow-blue-600/10 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    Register Organization
+                  </Link>
                 </div>
               ) : (
                 <div

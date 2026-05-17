@@ -1,14 +1,14 @@
 "use client";
 
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, Legend, AreaChart, Area 
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Legend, AreaChart, Area
 } from 'recharts';
 
 interface DonationAnalytics {
   name: string; // Month/Year
   donations: number;
-  fulfillment: number;
+  confirmed: number;
 }
 
 interface GraphsViewProps {
@@ -31,33 +31,33 @@ export default function GraphsView({ monthlyData, yearlyData }: GraphsViewProps)
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="colorDonations" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fill: '#94a3b8', fontSize: 12 }}
                   dy={10}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fill: '#94a3b8', fontSize: 12 }}
                 />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="donations" 
-                  stroke="#3b82f6" 
+                <Area
+                  type="monotone"
+                  dataKey="donations"
+                  stroke="#3b82f6"
                   strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorDonations)" 
+                  fillOpacity={1}
+                  fill="url(#colorDonations)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -74,25 +74,44 @@ export default function GraphsView({ monthlyData, yearlyData }: GraphsViewProps)
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={yearlyData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fill: '#94a3b8', fontSize: 12 }}
                   dy={10}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fill: '#94a3b8', fontSize: 12 }}
                 />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Legend verticalAlign="top" align="right" iconType="circle" />
+                <Legend 
+                  verticalAlign="top" 
+                  align="right" 
+                  content={(props: any) => {
+                    const { payload } = props;
+                    const sortedPayload = payload ? [...payload].sort((a: any, b: any) => a.value === 'Donations' ? -1 : 1) : [];
+                    return (
+                      <ul style={{ display: 'flex', justifyContent: 'flex-end', listStyle: 'none', margin: 0, padding: 0, gap: '20px' }}>
+                        {sortedPayload.map((entry: any, index: number) => (
+                          <li key={`item-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <svg width="10" height="10" viewBox="0 0 10 10">
+                              <circle cx="5" cy="5" r="5" fill={entry.color} />
+                            </svg>
+                            <span style={{ color: entry.color, fontSize: '14px' }}>{entry.value}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  }}
+                />
                 <Bar dataKey="donations" name="Donations" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="fulfillment" name="Fulfillment" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                <Bar dataKey="confirmed" name="Confirmed" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>

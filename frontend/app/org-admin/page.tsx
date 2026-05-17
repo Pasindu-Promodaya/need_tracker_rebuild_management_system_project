@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { 
-  Organization, getOrganizations, 
+import {
+  Organization, getOrganizations,
   NeedItem, getNeeds,
   Donation, getDonations
 } from "@/lib/api";
@@ -11,12 +11,12 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import StatsCard from "@/components/StatsCard";
 import AnalyticsView from "@/components/AnalyticsView";
 import GraphsView from "@/components/GraphsView";
-import { 
-  Building2, 
-  Layers, 
-  ClipboardList, 
-  AlertTriangle, 
-  DollarSign,
+import {
+  Building2,
+  Layers,
+  ClipboardList,
+  AlertTriangle,
+  HeartHandshake,
   FileText,
   BarChart3,
   ArrowRight,
@@ -28,7 +28,7 @@ import Link from "next/link";
 export default function OrgAdminDashboard() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  
+
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [stats, setStats] = useState({
     sections: 0,
@@ -38,6 +38,7 @@ export default function OrgAdminDashboard() {
   });
   const [analytics, setAnalytics] = useState({
     fulfillmentRate: 0,
+    monthlyGrowth: 0,
     donationRate: 0,
     sectionMetrics: [] as any[],
     monthlyData: [] as any[],
@@ -60,30 +61,55 @@ export default function OrgAdminDashboard() {
       try {
         setIsLoading(true);
         setError("");
-        
+
         const orgs = await getOrganizations();
         if (orgs.length === 0) {
           setIsLoading(false);
           return;
         }
-        
+
         const myOrg = orgs[0];
         setOrganization(myOrg);
 
         const allNeeds = await getNeeds();
         const myNeeds = allNeeds.filter(n => n.section_detail?.organization === myOrg.id);
-        const critical = myNeeds.filter(n => n.priority === "CRITICAL");
-        
+        const critical = myNeeds
+          .filter(n => n.priority === "CRITICAL")
+          .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+
+        const unfulfilledCritical = critical.filter(n => n.quantity_received < n.quantity_required);
+
         const allDonations = await getDonations();
-        const myDonations = allDonations.filter(d => d.need_item_detail?.id && myNeeds.some(n => n.id === d.need_item));
+        const myDonations = allDonations.filter(d =>
+          (d.status === "CONFIRMED" || d.status === "FULFILLED") &&
+          d.need_item_detail?.id &&
+          myNeeds.some(n => n.id === d.need_item)
+        );
+
+        // Time-based data for Graphs
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
 
         // Analytics Calculations
         const totalRequired = myNeeds.reduce((sum, n) => sum + n.quantity_required, 0);
         const totalReceived = myNeeds.reduce((sum, n) => sum + n.quantity_received, 0);
         const fulfillmentRate = totalRequired > 0 ? Math.round((totalReceived / totalRequired) * 100) : 0;
 
-        const needsWithDonations = myNeeds.filter(n => myDonations.some(d => d.need_item === n.id)).length;
-        const donationRate = myNeeds.length > 0 ? Math.round((needsWithDonations / myNeeds.length) * 100) : 0;
+        const thisMonthDonations = myDonations.filter(d => {
+          if (!d.created_at) return false;
+          const dDate = new Date(d.created_at);
+          return dDate.getMonth() === currentMonth && dDate.getFullYear() === currentYear;
+        });
+        const receivedThisMonth = Math.min(totalReceived, thisMonthDonations.reduce((sum, d) => sum + d.quantity, 0));
+        const receivedLastMonthTotal = totalReceived - receivedThisMonth;
+        const lastMonthFulfillmentRate = totalRequired > 0 ? Math.round((receivedLastMonthTotal / totalRequired) * 100) : 0;
+        const monthlyGrowth = fulfillmentRate - lastMonthFulfillmentRate;
+
+        const orgDonations = allDonations.filter(d => myNeeds.some(n => n.id === d.need_item));
+        const needsWithAnyDonation = myNeeds.filter(n => orgDonations.some(d => d.need_item === n.id)).length;
+        const donationRate = myNeeds.length > 0 ? Math.round((needsWithAnyDonation / myNeeds.length) * 100) : 0;
 
         // Section Metrics
         const sectionMetrics = (myOrg.sections || []).map(section => {
@@ -91,7 +117,7 @@ export default function OrgAdminDashboard() {
           const received = sectionNeeds.reduce((sum, n) => sum + n.quantity_received, 0);
           const required = sectionNeeds.reduce((sum, n) => sum + n.quantity_required, 0);
           const percentage = required > 0 ? Math.round((received / required) * 100) : 0;
-          
+
           return {
             label: section.name,
             value: received,
@@ -101,27 +127,40 @@ export default function OrgAdminDashboard() {
           };
         });
 
-        // Time-based data for Graphs
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const currentMonth = new Date().getMonth();
+
+
         const last6Months = [];
         for (let i = 5; i >= 0; i--) {
-            const m = (currentMonth - i + 12) % 12;
-            last6Months.push(months[m]);
+          let d = new Date(currentYear, currentMonth - i, 1);
+          last6Months.push({
+            name: months[d.getMonth()],
+            month: d.getMonth(),
+            year: d.getFullYear()
+          });
         }
 
-        const monthlyData = last6Months.map(month => {
-            // Mocking historical data based on current donations for demonstration
-            // In a real app, this would be grouped by donation.created_at
-            const count = myDonations.length > 0 ? Math.floor(Math.random() * myDonations.length) + 1 : 0;
-            return { name: month, donations: count, fulfillment: Math.floor(Math.random() * 100) };
+        const monthlyData = last6Months.map(m => {
+          const monthDonations = orgDonations.filter(d => {
+            if (!d.created_at) return false;
+            const dDate = new Date(d.created_at);
+            return dDate.getMonth() === m.month && dDate.getFullYear() === m.year;
+          });
+          return { name: m.name, donations: monthDonations.length, confirmed: 0 };
         });
 
-        const yearlyData = [
-            { name: '2023', donations: Math.floor(myDonations.length * 0.8), fulfillment: 65 },
-            { name: '2024', donations: myDonations.length, fulfillment: fulfillmentRate },
-            { name: '2025', donations: Math.floor(myDonations.length * 1.2), fulfillment: 0 },
-        ];
+        const last3Years = [currentYear - 2, currentYear - 1, currentYear];
+        const yearlyData = last3Years.map(year => {
+          const yearDonations = orgDonations.filter(d => {
+            if (!d.created_at) return false;
+            return new Date(d.created_at).getFullYear() === year;
+          });
+          const confirmedDonations = yearDonations.filter(d => d.status === "CONFIRMED" || d.status === "FULFILLED");
+          return {
+            name: year.toString(),
+            donations: yearDonations.length,
+            confirmed: confirmedDonations.length
+          };
+        });
 
         setStats({
           sections: myOrg.sections?.length || 0,
@@ -132,13 +171,14 @@ export default function OrgAdminDashboard() {
 
         setAnalytics({
           fulfillmentRate,
+          monthlyGrowth,
           donationRate,
           sectionMetrics,
           monthlyData,
           yearlyData
         });
-        
-        setCriticalNeeds(critical.slice(0, 3));
+
+        setCriticalNeeds(unfulfilledCritical.slice(0, 3));
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Failed to fetch dashboard data");
       } finally {
@@ -153,10 +193,22 @@ export default function OrgAdminDashboard() {
 
   if (!organization) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <Building2 className="text-blue-600 mx-auto mb-6" size={40} />
-        <h1 className="text-3xl font-bold mb-4">No Organization Assigned</h1>
-        <Link href="/organizations/new" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold">Register Your Organization</Link>
+      <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-200 max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <Building2 size={36} strokeWidth={2.5} />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">No Organization Assigned</h2>
+          <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+            Your account is not currently linked to any registered organization. To begin managing needs and tracking donations, please register your hospital or institution.
+          </p>
+          <Link
+            href="/organizations/new"
+            className="inline-block w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-600/20"
+          >
+            Register Your Organization
+          </Link>
+        </div>
       </div>
     );
   }
@@ -164,7 +216,7 @@ export default function OrgAdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        
+
         {/* Header */}
         <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -176,16 +228,16 @@ export default function OrgAdminDashboard() {
             <p className="text-slate-500 mt-1">Manage your organization's needs and monitor impact</p>
           </div>
           <div className="flex items-center gap-3">
-             <Link href="/documents" className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-600/20"><FileText size={18} />Upload Document</Link>
+            <Link href="/documents" className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-600/20"><FileText size={18} />Upload Document</Link>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <StatsCard title="Sections" value={stats.sections} subtitle="Internal departments" icon={<Layers size={20} />} color="purple" />
-            <StatsCard title="Total Needs" value={stats.totalNeeds} subtitle="Items registered" icon={<ClipboardList size={20} />} color="green" />
-            <StatsCard title="Critical Needs" value={stats.criticalNeeds} subtitle="Urgent items" icon={<AlertTriangle size={20} />} color="red" />
-            <StatsCard title="Donations" value={stats.donations} subtitle="Total contributions" icon={<DollarSign size={20} />} color="blue" />
+          <StatsCard title="SECTIONS" value={stats.sections} subtitle="Internal sections" icon={<Layers size={20} />} color="purple" />
+          <StatsCard title="TOTAL NEEDS" value={stats.totalNeeds} subtitle="Items registered" icon={<ClipboardList size={20} />} color="green" />
+          <StatsCard title="CRITICAL NEEDS" value={stats.criticalNeeds} subtitle="Urgent items" icon={<AlertTriangle size={20} />} color="red" />
+          <StatsCard title="TOTAL DONATIONS" value={stats.donations} subtitle="Total contributions" icon={<HeartHandshake size={20} />} color="blue" />
         </div>
 
         {/* Analytics & Graphs */}
@@ -196,18 +248,18 @@ export default function OrgAdminDashboard() {
               <p className="text-slate-500 text-sm">Visualizing donation trends and fulfillment impact</p>
             </div>
             <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 flex items-center gap-2 shadow-sm">
-                <BarChart3 className="text-blue-600" size={18} />
-                <span className="text-sm font-bold text-slate-700">Full Report</span>
+              <BarChart3 className="text-blue-600" size={18} />
+              <span className="text-sm font-bold text-slate-700">Full Report</span>
             </div>
           </div>
-          
-          <AnalyticsView 
+
+          <AnalyticsView
             fulfillmentRate={analytics.fulfillmentRate}
             donationRate={analytics.donationRate}
             sectionMetrics={analytics.sectionMetrics}
           />
 
-          <GraphsView 
+          <GraphsView
             monthlyData={analytics.monthlyData}
             yearlyData={analytics.yearlyData}
           />
@@ -224,7 +276,7 @@ export default function OrgAdminDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <ControlTile label="Manage Needs" desc="Update or add needs." icon={<ClipboardList size={20} />} href="/organizations" color="blue" />
               <ControlTile label="AI Upload" desc="Extract needs from lists." icon={<FileText size={20} />} href="/documents" color="indigo" />
-              <ControlTile label="Track Donations" desc="See all pledges." icon={<DollarSign size={20} />} href="/admin/donations" color="emerald" />
+              <ControlTile label="Track Donations" desc="See all pledges." icon={<HeartHandshake size={20} />} href="/admin/donations" color="emerald" />
               <ControlTile label="View Analytics" desc="Detailed graphs & trends." icon={<PieChart size={20} />} href="#analytics-section" color="rose" />
               <ControlTile label="Org Profile" desc="Update hospital info." icon={<Building2 size={20} />} href="/organizations" color="amber" />
             </div>
@@ -232,42 +284,47 @@ export default function OrgAdminDashboard() {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8">
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                    <h3 className="font-bold text-slate-900 mb-6">Recent Critical Needs</h3>
-                    <div className="space-y-4">
-                        {criticalNeeds.map(need => (
-                            <div key={need.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
-                                <div>
-                                    <p className="font-bold text-slate-900">{need.name}</p>
-                                    <p className="text-xs text-slate-500">{need.section_detail?.name}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-bold text-rose-600">{need.quantity_required - need.quantity_received} left</p>
-                                    <div className="w-24 h-1.5 bg-slate-200 rounded-full mt-1 overflow-hidden">
-                                        <div className="h-full bg-rose-500" style={{ width: `${Math.round((need.quantity_received/need.quantity_required)*100)}%` }} />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+          <div className="lg:col-span-8">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h3 className="font-bold text-slate-900 mb-6">Recent Critical Needs</h3>
+              <div className="space-y-4">
+                {criticalNeeds.map(need => (
+                  <div key={need.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-slate-900">{need.name}</p>
+                      <p className="text-xs text-slate-500">{need.section_detail?.name}</p>
                     </div>
-                </div>
-            </div>
-            <div className="lg:col-span-4">
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 text-white h-full shadow-xl">
-                    <h3 className="text-xl font-bold mb-6 text-blue-400">Monthly Snapshot</h3>
-                    <div className="space-y-8">
-                        <div>
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Total Received</p>
-                            <p className="text-3xl font-black">{analytics.fulfillmentRate}% <span className="text-xs text-emerald-400 font-bold ml-2">↑ 12%</span></p>
-                        </div>
-                        <div>
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">New Donors</p>
-                            <p className="text-3xl font-black">{stats.donations} <span className="text-xs text-blue-400 font-bold ml-2">Active</span></p>
-                        </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-rose-600">{need.quantity_required - need.quantity_received} left</p>
+                      <div className="w-24 h-1.5 bg-slate-200 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-rose-500" style={{ width: `${Math.round((need.quantity_received / need.quantity_required) * 100)}%` }} />
+                      </div>
                     </div>
-                </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          </div>
+          <div className="lg:col-span-4">
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-8 text-white h-full shadow-xl">
+              <h3 className="text-xl font-bold mb-6 text-blue-400">Monthly Snapshot</h3>
+              <div className="space-y-8">
+                <div>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Total Received</p>
+                  <p className="text-3xl font-black">
+                    {analytics.fulfillmentRate}%
+                    <span className={`text-xs font-bold ml-2 ${analytics.monthlyGrowth >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {analytics.monthlyGrowth >= 0 ? '↑' : '↓'} {Math.abs(analytics.monthlyGrowth)}%
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">New Donors</p>
+                  <p className="text-3xl font-black">{stats.donations} <span className="text-xs text-blue-400 font-bold ml-2">Active</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

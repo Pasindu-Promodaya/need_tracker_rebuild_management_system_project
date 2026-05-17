@@ -58,9 +58,14 @@ export default function DonorsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Registered Donors
-        </h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            Registered Donors
+          </h1>
+          <p className="text-slate-500 mt-2">
+            View and monitor donors registered in the platform
+          </p>
+        </div>
 
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-600 rounded-md p-4">
