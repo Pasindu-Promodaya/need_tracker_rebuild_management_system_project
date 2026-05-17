@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import {
   getAdminApprovals,
@@ -61,28 +61,41 @@ export default function ApprovalsPage() {
     });
   };
 
-  const loadAllApprovals = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const [pending, approved] = await Promise.all([
-        getAdminApprovals(),
-        getApprovedOrgAdmins(),
-      ]);
-      setPendingRequests(sortByNewest(pending));
-      setApprovedRequests(sortByNewest(approved));
-    } catch (err: unknown) {
-      const error = err as Error;
-      setError("Failed to load approval requests");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    let isMounted = true;
+    const loadAllApprovals = async () => {
+      try {
+        if (isMounted) {
+          setLoading(true);
+          setError("");
+        }
+        const [pending, approved] = await Promise.all([
+          getAdminApprovals(),
+          getApprovedOrgAdmins(),
+        ]);
+        if (isMounted) {
+          setPendingRequests(sortByNewest(pending as ApprovalRequest[]));
+          setApprovedRequests(sortByNewest(approved as ApprovalRequest[]));
+        }
+      } catch (err: unknown) {
+        if (isMounted) {
+          const error = err as Error;
+          setError("Failed to load approval requests");
+          console.error(error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadAllApprovals();
-  }, [loadAllApprovals]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleApprove = async (id: number) => {
     const request = pendingRequests.find((r) => r.id === id);
@@ -100,7 +113,7 @@ export default function ApprovalsPage() {
     if (!confirmDialog.userId) return;
 
     try {
-      const result = await approveOrgAdmin(confirmDialog.userId);
+      const result = await approveOrgAdmin(confirmDialog.userId) as { user: ApprovalRequest };
       setPendingRequests(
         pendingRequests.filter((r) => r.id !== confirmDialog.userId),
       );
@@ -112,8 +125,8 @@ export default function ApprovalsPage() {
         userName: "",
       });
       alert("Admin approved successfully!");
-    } catch (err: any) {
-      setError(err.message || "Failed to approve");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to approve");
       setConfirmDialog({
         isOpen: false,
         type: null,
@@ -123,12 +136,7 @@ export default function ApprovalsPage() {
     }
   };
 
-  const handleReject = async (id: number) => {
-    const request = pendingRequests.find((r) => r.id === id);
-    if (!request) return;
 
-    setRejectingId(id);
-  };
 
   const handleRejectConfirm = async () => {
     if (!rejectionReason.trim()) {
@@ -151,7 +159,7 @@ export default function ApprovalsPage() {
     if (!confirmDialog.userId) return;
 
     try {
-      const result = await rejectOrgAdmin(
+      await rejectOrgAdmin(
         confirmDialog.userId,
         rejectionReason,
       );
@@ -167,8 +175,8 @@ export default function ApprovalsPage() {
         userName: "",
       });
       alert("Request rejected successfully!");
-    } catch (err: any) {
-      setError(err.message || "Failed to reject");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to reject");
       setConfirmDialog({
         isOpen: false,
         type: null,

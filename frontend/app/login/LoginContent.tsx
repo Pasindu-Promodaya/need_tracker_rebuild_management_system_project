@@ -46,10 +46,14 @@ export default function LoginContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    const tab = (searchParams.get("tab") as any) || "login";
-    setActiveTab(tab);
-    setError(null);
-  }, [searchParams]);
+    const tab = (searchParams.get("tab") as "login" | "register" | "org-admin") || "login";
+    if (activeTab !== tab) {
+      setTimeout(() => setActiveTab(tab), 0);
+    }
+    if (error !== null) {
+      setTimeout(() => setError(null), 0);
+    }
+  }, [searchParams, activeTab, error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,8 +113,8 @@ export default function LoginContent() {
         setSelectedOrgType("");
         setActiveTab("login");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }

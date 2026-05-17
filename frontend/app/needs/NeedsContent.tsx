@@ -20,22 +20,19 @@ export default function NeedsContent() {
     "priority",
   );
 
-  const fetchNeeds = async () => {
-    try {
-      const data = await getNeeds(priorityFilter || undefined, true);
-      setNeeds(data);
-    } catch (error) {
-      console.error("Failed to fetch needs:", error);
-    }
-  };
-
   useEffect(() => {
-    async function fetchNeedsWithLoader() {
+    async function loadNeeds() {
       setLoading(true);
-      await fetchNeeds();
-      setLoading(false);
+      try {
+        const data = await getNeeds(priorityFilter || undefined, true);
+        setNeeds(data);
+      } catch (error) {
+        console.error("Failed to fetch needs:", error);
+      } finally {
+        setLoading(false);
+      }
     }
-    fetchNeedsWithLoader();
+    loadNeeds();
   }, [priorityFilter]);
 
   // Sort needs

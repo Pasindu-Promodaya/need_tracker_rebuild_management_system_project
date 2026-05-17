@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { NeedItem, Donation } from "@/lib/api";
+import { NeedItem } from "@/lib/api";
 import { Loader2, X } from "lucide-react";
 
 export interface DonationFormData {
@@ -62,7 +62,6 @@ export default function DonateModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -87,7 +86,7 @@ export default function DonateModal({
     try {
       const { createDonation } = await import("@/lib/api");
 
-      const donationData: any = {
+      const donationData: Record<string, unknown> = {
         need_item: needItem.id,
         quantity: quantity,
         status: "PENDING",
@@ -135,14 +134,15 @@ export default function DonateModal({
         onSuccess();
         onClose();
       }, 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsLoading(false);
-      if (err.message && err.message.includes("401")) {
+      const errorMessage = err instanceof Error ? err.message : "";
+      if (errorMessage.includes("401")) {
         setError("Your session has expired. Please sign in again.");
-      } else if (err.message && err.message.includes("credentials")) {
+      } else if (errorMessage.includes("credentials")) {
         setError("Authentication failed. Please sign in again.");
       } else {
-        setError(err.message || "Failed to create donation");
+        setError(errorMessage || "Failed to create donation");
       }
     }
   };

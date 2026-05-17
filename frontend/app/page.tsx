@@ -2,24 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Organization, getOrganizations, getNeeds } from "@/lib/api";
+import { Organization, getOrganizations } from "@/lib/api";
 import { PageLoading } from "@/components/LoadingSpinner";
-import { useAuth } from "@/lib/AuthContext";
 import Image from "next/image";
 import AdvancedSriLankaMap from "@/components/AdvancedSriLankaMap";
 
 export default function Home() {
-  const { user } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
 
   const fetchData = async () => {
     try {
       const orgs = await getOrganizations();
       setOrganizations(orgs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data");
+      console.error(err instanceof Error ? err.message : "Failed to load data");
     }
   };
 
@@ -349,7 +347,7 @@ export default function Home() {
                   </svg>
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900">
-                  We're a hospital
+                  We&apos;re a hospital
                 </h2>
                 <p className="text-sm text-slate-500 leading-relaxed">
                   Join NeedTracker to publish your needs, manage donations and
