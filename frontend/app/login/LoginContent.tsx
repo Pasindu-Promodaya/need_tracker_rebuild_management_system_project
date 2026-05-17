@@ -315,7 +315,7 @@ export default function LoginContent() {
 
                       <div className="space-y-4">
                         <div>
-                          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Username or Email</label>
+                          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                           <IconInput
                             id="username"
                             placeholder="admin@hospital.org"
