@@ -48,7 +48,7 @@ export default function ProfilePage() {
       profileForm.email !== newForm.email ||
       profileForm.phone_number !== newForm.phone_number
     ) {
-      setProfileForm(newForm);
+      setTimeout(() => setProfileForm(newForm), 0);
     }
   }, [user, profileForm]);
 
