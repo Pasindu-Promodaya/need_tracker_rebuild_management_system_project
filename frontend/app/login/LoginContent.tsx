@@ -47,9 +47,13 @@ export default function LoginContent() {
 
   useEffect(() => {
     const tab = (searchParams.get("tab") as "login" | "register" | "org-admin") || "login";
-    setActiveTab((prev) => (prev !== tab ? tab : prev));
-    setError(null);
-  }, [searchParams]);
+    if (activeTab !== tab) {
+      setActiveTab(tab);
+    }
+    if (error !== null) {
+      setError(null);
+    }
+  }, [searchParams, activeTab, error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

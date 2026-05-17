@@ -33,25 +33,24 @@ export default function ProfilePage() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
-    if (user) {
-      setProfileForm((prevForm) => {
-        if (
-          prevForm.first_name !== (user.first_name || "") ||
-          prevForm.last_name !== (user.last_name || "") ||
-          prevForm.email !== (user.email || "") ||
-          prevForm.phone_number !== (user.phone_number || "")
-        ) {
-          return {
-            first_name: user.first_name || "",
-            last_name: user.last_name || "",
-            email: user.email || "",
-            phone_number: user.phone_number || "",
-          };
-        }
-        return prevForm;
-      });
+    if (!user) return;
+
+    const newForm = {
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      email: user.email || "",
+      phone_number: user.phone_number || "",
+    };
+
+    if (
+      profileForm.first_name !== newForm.first_name ||
+      profileForm.last_name !== newForm.last_name ||
+      profileForm.email !== newForm.email ||
+      profileForm.phone_number !== newForm.phone_number
+    ) {
+      setProfileForm(newForm);
     }
-  }, [user]);
+  }, [user, profileForm]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
