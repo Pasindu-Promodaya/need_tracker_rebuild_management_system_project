@@ -123,7 +123,7 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with: 
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ravindudilhan
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push backend
@@ -131,14 +131,14 @@ jobs:
         with: 
           context: ./backend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/rebuild-backend:latest  
+          tags: ravindudilhan/rebuild-backend:latest  
           
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with: 
           context: ./frontend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/rebuild-frontend:latest
+          tags: ravindudilhan/rebuild-frontend:latest
 
 
        # 5. Deploy to K3s on Contabo
