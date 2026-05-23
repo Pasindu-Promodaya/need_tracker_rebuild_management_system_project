@@ -152,7 +152,6 @@ jobs:
         with:
           scan-type: config
           scan-ref: .
-          scanners: config
           severity: HIGH,CRITICAL
           format: table
           output: trivy-policy-report.txt
