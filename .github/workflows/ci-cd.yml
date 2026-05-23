@@ -105,7 +105,7 @@ jobs:
       - name: Scan backend dependencies
         id: backend_vuln_scan
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.22.0
         with:
           scan-type: fs
           scan-ref: backend
@@ -117,7 +117,7 @@ jobs:
       - name: Scan frontend dependencies
         id: frontend_vuln_scan
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.22.0
         with:
           scan-type: fs
           scan-ref: frontend
@@ -148,7 +148,7 @@ jobs:
       - name: Scan infrastructure and Docker policies
         id: policy_scan
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.22.0
         with:
           scan-type: config
           scan-ref: .
