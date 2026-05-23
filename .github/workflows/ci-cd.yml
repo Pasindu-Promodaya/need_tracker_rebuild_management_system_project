@@ -24,7 +24,7 @@ jobs:
         env:
           POSTGRES_DB: rebuild_db
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: admin1234
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
         ports:
           - 5432:5432
         options: >-
@@ -55,7 +55,7 @@ jobs:
           SECRET_KEY: test-secret-key
           DB_NAME: rebuild_db
           DB_USER: postgres
-          DB_PASSWORD: admin1234
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_HOST: localhost
           DB_PORT: 5432
           DEBUG: "True"
@@ -66,7 +66,7 @@ jobs:
           SECRET_KEY: test-secret-key
           DB_NAME: rebuild_db
           DB_USER: postgres
-          DB_PASSWORD: admin1234
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_HOST: localhost
           DB_PORT: 5432
           DEBUG: "True"
