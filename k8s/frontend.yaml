@@ -21,7 +21,8 @@ spec:
         ports: [{containerPort: 3000}]
         env:
         - name: NEXT_PUBLIC_API_URL
-          value: http://backend:8000
+          value: http://62.171.171.71.nip.io/api
+          #value: http://backend:8000
 ---
 apiVersion: v1
 kind: Service
