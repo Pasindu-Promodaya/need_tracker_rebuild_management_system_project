@@ -223,3 +223,51 @@ jobs:
           context: ./frontend
           push: true
           tags: ravindudilhan/rebuild-frontend:latest
+
+  deploy-k3s:
+    needs: [push-images]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        run: |
+          KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_DATA" > ~/.kube/config
+
+      - name: Ensure namespace exists
+        run: |
+          kubectl create namespace rikili001 --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create Kubernetes secrets
+        env:
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          kubectl create secret generic backend-secrets \
+            --from-literal=SECRET_KEY="$DJANGO_SECRET_KEY" \
+            --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+            -n rikili001 \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply PostgreSQL manifests
+        run: kubectl apply -f k8s/postgres.yaml
+
+      - name: Apply backend manifests
+        run: kubectl apply -f k8s/backend.yaml
+
+      - name: Apply frontend manifests
+        run: kubectl apply -f k8s/frontend.yaml
+
+      - name: Apply ingress manifest
+        run: kubectl apply -f k8s/ingress.yaml
