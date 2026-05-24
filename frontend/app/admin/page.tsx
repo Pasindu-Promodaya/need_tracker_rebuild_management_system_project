@@ -3,13 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  Organization,
   getOrganizations,
   NeedItem,
   getNeeds,
-  Donation,
-  getDonations,
-  Section,
   getSections,
   getDonors,
 } from "@/lib/api";
@@ -20,16 +16,13 @@ import {
   ClipboardList,
   AlertTriangle,
   Search,
-  DollarSign,
   Users,
   FileText,
   BarChart3,
-  ChevronRight,
   ArrowRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -47,7 +40,7 @@ export default function AdminDashboard() {
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [, setError] = useState("");
 
   useEffect(() => {
     if (!authLoading) {
@@ -380,7 +373,7 @@ function StatCard({
   label: string;
   value: number;
   subtext: string;
-  icon: any;
+  icon: React.ReactNode;
   iconBg: string;
   isWarning?: boolean;
 }) {
@@ -479,11 +472,11 @@ function ControlTile({
 }: {
   label: string;
   desc: string;
-  icon: any;
+  icon: React.ReactNode;
   href: string;
   color: string;
 }) {
-  const colorMap: any = {
+  const colorMap: Record<string, string> = {
     blue: "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20",
     indigo:
       "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20",

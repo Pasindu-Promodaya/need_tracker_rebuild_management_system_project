@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Organization } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let L: any = null;
 
 const initLeaflet = async () => {
@@ -51,6 +52,7 @@ const normalizeDistrictKey = (district: string): string =>
 
 export default function AdvancedSriLankaMap({ organizations = [] }: AdvancedSriLankaMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const map = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -75,8 +77,8 @@ export default function AdvancedSriLankaMap({ organizations = [] }: AdvancedSriL
 
         // In React Strict Mode, effects can run twice in development.
         // Reset previous Leaflet binding on the same DOM node before creating a new map.
-        if ((container as any)._leaflet_id) {
-          (container as any)._leaflet_id = undefined;
+        if ((container as unknown as { _leaflet_id?: boolean })._leaflet_id) {
+          (container as unknown as { _leaflet_id?: boolean })._leaflet_id = undefined;
           container.innerHTML = "";
         }
 
@@ -172,7 +174,7 @@ export default function AdvancedSriLankaMap({ organizations = [] }: AdvancedSriL
         map.current = null;
       }
     };
-  }, []);
+  }, [organizations]);
 
   return (
     <div className="w-full h-full rounded-xl overflow-hidden shadow-2xl relative">

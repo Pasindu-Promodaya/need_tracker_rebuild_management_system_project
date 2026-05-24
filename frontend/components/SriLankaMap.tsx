@@ -7,7 +7,8 @@ interface SriLankaMapProps {
   organizations?: Organization[];
 }
 
-export default function SriLankaMap({ organizations = [] }: SriLankaMapProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function SriLankaMap({ organizations: _organizations = [] }: SriLankaMapProps) {
   const [hoveredHospital, setHoveredHospital] = useState<number | null>(null);
 
   // Simplified hospital locations on Sri Lanka map (approximate coordinates)
