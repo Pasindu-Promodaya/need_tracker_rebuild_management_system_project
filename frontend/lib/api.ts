@@ -118,6 +118,8 @@ export interface Donation {
   government_officer_contact: string;
   government_email: string;
   donation_letter_file: string | null;
+  confirmed_by_name?: string;
+  cancelled_by_name?: string;
   need_item_detail?: {
     id: number;
     name: string;
@@ -373,7 +375,16 @@ export const updateOrganization = (id: number, data: Partial<Organization>) =>
     body: JSON.stringify(data),
   });
 export const deleteOrganization = (id: number) =>
-  fetchAPI<void>(`/organizations/${id}/`, { method: "DELETE" });
+  fetchAPI(`/organizations/${id}/`, { method: "DELETE" });
+
+export const getOrgAdmins = (orgId: number) =>
+  fetchAPI<any[]>(`/organizations/${orgId}/admins/`);
+
+export const inviteOrgAdmin = (orgId: number, data: any) =>
+  fetchAPI<any>(`/organizations/${orgId}/invite_admin/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 
 // Sections
 export const getSections = async () => {

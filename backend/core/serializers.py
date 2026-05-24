@@ -266,15 +266,18 @@ class SectionSerializer(serializers.ModelSerializer):
 # 4. Organization Serializer (Includes sections inside it)
 class OrganizationSerializer(serializers.ModelSerializer):
     sections = SectionSerializer(many=True, read_only=True)
-    admin_username = serializers.CharField(source='admin_user.username', read_only=True)
+    admins = serializers.SerializerMethodField()
 
     class Meta:
         model = Organization
         fields = [
-            'id', 'name', 'registration_number', 'address', 'district',
-            'org_type', 'description', 'phone', 'email_contact', 'website',
-            'established_year', 'admin_user', 'admin_username', 'sections',
+            'id', 'name', 'registration_number', 'address', 'district', 
+            'org_type', 'description', 'phone', 'email_contact', 'website', 
+            'established_year', 'admins', 'sections',
         ]
+        
+    def get_admins(self, obj):
+        return [admin.username for admin in obj.admins.all()]
 
     def validate_name(self, value):
         """Check if organization name is unique"""
@@ -347,6 +350,8 @@ class NeedItemDetailSerializer(serializers.ModelSerializer):
 
 class DonationSerializer(serializers.ModelSerializer):
     need_item_detail = NeedItemDetailSerializer(source='need_item', read_only=True)
+    confirmed_by_name = serializers.SerializerMethodField()
+    cancelled_by_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Donation
@@ -356,6 +361,21 @@ class DonationSerializer(serializers.ModelSerializer):
             'donor_name', 'donor_contact', 'donor_organization', 'donor_address',
             'donor_email', 'donor_phone', 'government_department', 'government_program',
             'government_officer_name', 'government_officer_designation',
-            'government_officer_contact', 'government_email', 'donation_letter_file'
+            'government_officer_contact', 'government_email', 'donation_letter_file',
+            'confirmed_by_name', 'cancelled_by_name'
         ]
+
+    def get_confirmed_by_name(self, obj):
+        if obj.confirmed_by:
+            if obj.confirmed_by.first_name or obj.confirmed_by.last_name:
+                return f"{obj.confirmed_by.first_name} {obj.confirmed_by.last_name}".strip()
+            return obj.confirmed_by.username
+        return None
+
+    def get_cancelled_by_name(self, obj):
+        if obj.cancelled_by:
+            if obj.cancelled_by.first_name or obj.cancelled_by.last_name:
+                return f"{obj.cancelled_by.first_name} {obj.cancelled_by.last_name}".strip()
+            return obj.cancelled_by.username
+        return None
 

@@ -431,6 +431,24 @@ export default function DonationsPage() {
                   : "N/A"}
               </span>
             </div>
+
+            {(donation.status === "CONFIRMED" || donation.status === "FULFILLED") && donation.confirmed_by_name && (
+              <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                <span className="text-gray-500 font-medium">Confirmed By</span>
+                <span className="col-span-2 text-gray-900 font-semibold text-green-700">
+                  {donation.confirmed_by_name}
+                </span>
+              </div>
+            )}
+
+            {donation.status === "CANCELLED" && donation.cancelled_by_name && (
+              <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                <span className="text-gray-500 font-medium">Cancelled By</span>
+                <span className="col-span-2 text-gray-900 font-semibold text-red-700">
+                  {donation.cancelled_by_name}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="p-6 border-t shrink-0 flex justify-end">
@@ -544,10 +562,10 @@ export default function DonationsPage() {
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900">
             Donation Management
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-500 mt-1">
             Review and confirm donations from donors
           </p>
         </div>

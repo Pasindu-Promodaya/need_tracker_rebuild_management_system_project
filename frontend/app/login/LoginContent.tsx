@@ -318,7 +318,7 @@ export default function LoginContent() {
                           <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                           <IconInput
                             id="username"
-                            placeholder="admin@hospital.org"
+                            placeholder="jane_doe"
                             icon={User}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -403,7 +403,7 @@ export default function LoginContent() {
                           <label htmlFor="reg-username" className="block text-sm font-medium text-gray-700 mb-1">Donor username</label>
                           <IconInput
                             id="reg-username"
-                            placeholder="johndoe"
+                            placeholder="john_doe"
                             icon={User}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -539,7 +539,7 @@ export default function LoginContent() {
                           <label htmlFor="orgUsername" className="block text-sm font-medium text-gray-700 mb-1">Admin username</label>
                           <IconInput
                             id="orgUsername"
-                            placeholder="janesmith"
+                            placeholder="jane_smith"
                             icon={User}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}

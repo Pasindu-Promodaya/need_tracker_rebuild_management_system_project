@@ -101,26 +101,26 @@ export default function Navbar() {
 
   const navLinks = isAdmin
     ? [
-        { href: "/", label: "Dashboard" },
-        { href: "/organizations", label: "Organizations" },
-        { href: "/needs", label: "All Needs" },
-        ...(user?.role === "ADMIN"
-          ? [
-              { href: "/admin/approvals", label: "Approvals" },
-              { href: "/admin/donors", label: "Donors" },
-            ]
-          : []),
-        ...(user?.role === "ORG_ADMIN"
-          ? [
-              { href: "/documents", label: "Documents" },
-              { href: "/admin/donations", label: "Donations" },
-            ]
-          : []),
-      ]
+      { href: "/", label: "Dashboard" },
+      { href: "/organizations", label: "Organizations" },
+      { href: "/needs", label: "All Needs" },
+      ...(user?.role === "ADMIN"
+        ? [
+          { href: "/admin/approvals", label: "Approvals" },
+          { href: "/admin/donors", label: "Donors" },
+        ]
+        : []),
+      ...(user?.role === "ORG_ADMIN"
+        ? [
+          { href: "/documents", label: "Documents" },
+          { href: "/admin/donations", label: "Donations" },
+        ]
+        : []),
+    ]
     : [
-        { href: "/", label: "Dashboard" },
-        { href: "/needs", label: "Current Needs" },
-      ];
+      { href: "/", label: "Dashboard" },
+      { href: "/needs", label: "Current Needs" },
+    ];
 
   const handleNavMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const navEl = navRef.current;
@@ -206,6 +206,12 @@ export default function Navbar() {
                           className={`text-sm font-semibold transition-colors ${pathname === "/admin/donations" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
                         >
                           Donations
+                        </Link>
+                        <Link
+                          href="/org-admin/manage-admins"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/org-admin/manage-admins" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Admins
                         </Link>
                       </>
                     )}

@@ -63,7 +63,7 @@ class IsOrgAdminOfThisOrg(BasePermission):
             return True
         # ORG_ADMIN can only access their own organization
         if request.user.role == 'ORG_ADMIN':
-            return obj.admin_user_id == request.user.id
+            return obj == request.user.organization
         return False
 # --- Auth Views ---
 
@@ -270,7 +270,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         
         # ORG_ADMIN users only see their own organization
         if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
-            return queryset.filter(admin_user=user)
+            return queryset.filter(admins=user)
         
         # DONOR users see all organizations (for viewing/donating)
         return queryset
@@ -278,7 +278,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         # ORG_ADMIN users can only create one organization
         if (hasattr(request.user, 'role') and request.user.role == 'ORG_ADMIN'):
-            if Organization.objects.filter(admin_user=request.user).exists():
+            if request.user.organization is not None:
                 return Response(
                     {"detail": "You can only create one organization. You already have an organization."},
                     status=status.HTTP_400_BAD_REQUEST
@@ -286,11 +286,11 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        """Set the admin_user to the current user if they're an ORG_ADMIN"""
+        """Set the organization on the user if they're an ORG_ADMIN"""
+        org = serializer.save()
         if hasattr(self.request.user, 'role') and self.request.user.role == 'ORG_ADMIN':
-            serializer.save(admin_user=self.request.user)
-        else:
-            serializer.save()
+            self.request.user.organization = org
+            self.request.user.save(update_fields=['organization'])
 
     # Custom action to get hierarchy (Org -> Sections -> Needs)
     @action(detail=True, methods=['get'])
@@ -298,6 +298,84 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         org = self.get_object()
         serializer = self.get_serializer(org)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsOrgAdminOfThisOrg])
+    def invite_admin(self, request, pk=None):
+        """Allows an existing Org Admin to invite another admin to the same organization."""
+        org = self.get_object()
+        
+        email = request.data.get('email')
+        username = request.data.get('username')
+        password = request.data.get('password')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+        
+        if not email or not username or not password:
+            return Response(
+                {"detail": "Email, username, and password are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        if User.objects.filter(username=username).exists():
+            return Response({"detail": "User with this username already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if User.objects.filter(email=email).exists():
+            return Response({"detail": "User with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            role='ORG_ADMIN',
+            approval_status='APPROVED',
+            organization=org,
+            first_name=first_name,
+            last_name=last_name
+        )
+        
+        # Send invitation email
+        try:
+            frontend_url = settings.FRONTEND_URL
+            login_url = f"{frontend_url}/login"
+            
+            subject = f"Invitation to manage {org.name} on NeedTracker"
+            message = (
+                f"Hello {first_name or username},\n\n"
+                f"You have been invited to manage '{org.name}' on the NeedTracker Hospital Donation Platform.\n\n"
+                f"Your account has been created with the following temporary credentials:\n"
+                f"Username: {username}\n"
+                f"Password: {password}\n\n"
+                f"Please log in using this link: {login_url}\n\n"
+                f"We recommend changing your password immediately after logging in.\n\n"
+                f"Thank you,\nThe NeedTracker Team"
+            )
+            
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # We don't want to fail the user creation if email fails, 
+            # but we should log it
+            print(f"Failed to send invitation email: {e}")
+        
+        return Response(
+            {"detail": "Admin invited successfully.", "user_id": user.id, "username": user.username}, 
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=True, methods=['get'], permission_classes=[IsOrgAdminOfThisOrg])
+    def admins(self, request, pk=None):
+        """List all admins who manage this organization."""
+        org = self.get_object()
+        data = [
+            {"id": a.id, "username": a.username, "email": a.email, "first_name": a.first_name, "last_name": a.last_name}
+            for a in org.admins.all()
+        ]
+        return Response(data)
 
 
 # 2. Section ViewSet
@@ -321,7 +399,7 @@ class SectionViewSet(viewsets.ModelViewSet):
         
         # ORG_ADMIN users only see sections from their organization
         if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
-            return queryset.filter(organization__admin_user=user)
+            return queryset.filter(organization__admins=user)
         
         # DONOR users see all sections (for viewing/donating)
         return queryset
@@ -350,7 +428,7 @@ class NeedItemViewSet(viewsets.ModelViewSet):
             pass  # Return all
         # ORG_ADMIN users only see needs from their organization
         elif hasattr(user, 'role') and user.role == 'ORG_ADMIN':
-            queryset = queryset.filter(section__organization__admin_user=user)
+            queryset = queryset.filter(section__organization__admins=user)
         # DONOR users see all needs (for viewing/donating)
         
         # Filter by priority if requested
@@ -588,29 +666,21 @@ class AdminApprovalViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check if organization already has an admin
-        if user.requested_organization and user.requested_organization.admin_user and user.requested_organization.admin_user != user:
-            return Response(
-                {'error': 'Organization already has an assigned admin'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         # Approve the user and assign them to the organization
         from django.utils import timezone
         user.approval_status = 'APPROVED'
         user.rejection_reason = ''
         user.approval_decided_at = timezone.now()
         user.approval_decided_by = request.user
-        user.save()
         
-        # Link the organization to this admin (if organization exists)
+        # Link the user to the organization
         if user.requested_organization:
-            org = user.requested_organization
-            org.admin_user = user
-            org.save()
-            org_name = org.name
+            user.organization = user.requested_organization
+            org_name = user.requested_organization.name
         else:
             org_name = 'Not assigned'
+            
+        user.save()
         
         # Send approval email
         try:
@@ -758,7 +828,7 @@ class AdminApprovalViewSet(viewsets.ViewSet):
         approved_users = User.objects.filter(
             role='ORG_ADMIN',
             approval_status='APPROVED'
-        ).select_related('requested_organization', 'managed_org')
+        ).select_related('requested_organization', 'organization')
         
         serializer = AdminApprovalSerializer(approved_users, many=True)
         return Response(serializer.data)
@@ -791,7 +861,7 @@ class DonationViewSet(viewsets.ModelViewSet):
             return queryset
             
         if hasattr(user, 'role') and user.role == 'ORG_ADMIN':
-            return queryset.filter(need_item__section__organization__admin_user=user)
+            return queryset.filter(need_item__section__organization__admins=user)
             
         if hasattr(user, 'role') and user.role == 'DONOR':
             return queryset.filter(donor=user)
@@ -901,6 +971,7 @@ class DonationViewSet(viewsets.ModelViewSet):
             
             # Set this donation to CONFIRMED
             donation.status = 'CONFIRMED'
+            donation.confirmed_by = request.user
             donation.save()
             
             # Check if need is now 100% fulfilled
@@ -928,6 +999,7 @@ class DonationViewSet(viewsets.ModelViewSet):
         donation = self.get_object()
         if donation.status == 'PENDING':
             donation.status = 'CANCELLED'
+            donation.cancelled_by = request.user
             donation.save()
             
             # Send cancellation email to donor
