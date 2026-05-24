@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import {
   Organization,
@@ -71,13 +72,14 @@ export default function AdminDashboard() {
         setIsLoading(true);
         setError("");
 
-        const [orgs, sections, allNeeds, allDonations, allDonors] = await Promise.all([
-          getOrganizations(),
-          getSections(),
-          getNeeds(),
-          getDonations(),
-          getDonors(),
-        ]);
+        const [orgs, sections, allNeeds, allDonations, allDonors] =
+          await Promise.all([
+            getOrganizations(),
+            getSections(),
+            getNeeds(),
+            getDonations(),
+            getDonors(),
+          ]);
 
         const critical = allNeeds.filter((n) => n.priority === "CRITICAL");
 
@@ -85,16 +87,27 @@ export default function AdminDashboard() {
           (n) => n.quantity_received < n.quantity_required,
         );
 
-        const unfulfilledCritical = critical.filter(
-          (n) => n.quantity_received < n.quantity_required,
-        ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const unfulfilledCritical = critical
+          .filter((n) => n.quantity_received < n.quantity_required)
+          .sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime(),
+          );
 
         // Calculate dynamic delivery rate
-        const validDonations = allDonations.filter(d => d.status !== 'CANCELLED');
-        const fulfilledDonations = allDonations.filter(d => d.status === 'FULFILLED');
-        const deliveryRate = validDonations.length > 0 
-          ? Math.round((fulfilledDonations.length / validDonations.length) * 100) 
-          : 0;
+        const validDonations = allDonations.filter(
+          (d) => d.status !== "CANCELLED",
+        );
+        const fulfilledDonations = allDonations.filter(
+          (d) => d.status === "FULFILLED",
+        );
+        const deliveryRate =
+          validDonations.length > 0
+            ? Math.round(
+                (fulfilledDonations.length / validDonations.length) * 100,
+              )
+            : 0;
 
         setStats({
           organizations: orgs.length,
@@ -292,7 +305,9 @@ export default function AdminDashboard() {
                       <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">
                         Successful Deliveries
                       </p>
-                      <p className="text-xl font-bold">{stats.successfulDeliveriesRate}%</p>
+                      <p className="text-xl font-bold">
+                        {stats.successfulDeliveriesRate}%
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -380,7 +395,7 @@ function StatCard({
   label: string;
   value: number;
   subtext: string;
-  icon: any;
+  icon: ReactNode;
   iconBg: string;
   isWarning?: boolean;
 }) {
@@ -479,11 +494,11 @@ function ControlTile({
 }: {
   label: string;
   desc: string;
-  icon: any;
+  icon: ReactNode;
   href: string;
   color: string;
 }) {
-  const colorMap: any = {
+  const colorMap: Record<string, string> = {
     blue: "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20",
     indigo:
       "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20",

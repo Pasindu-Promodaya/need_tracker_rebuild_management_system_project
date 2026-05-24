@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import {
+  AdminApprovalRequest as ApprovalRequest,
   getAdminApprovals,
   approveOrgAdmin,
   rejectOrgAdmin,
@@ -12,22 +13,6 @@ import {
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Check, X, ChevronDown, ChevronUp } from "lucide-react";
 
-interface ApprovalRequest {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone_number: string;
-  approval_status: "PENDING" | "APPROVED" | "REJECTED";
-  organization_name: string;
-  organization_type: string;
-  rejection_reason?: string;
-  approval_requested_at?: string;
-  approval_decided_at?: string;
-  approval_decided_by_username?: string;
-}
-
 interface ConfirmationDialog {
   isOpen: boolean;
   type: "approve" | "reject" | null;
@@ -35,12 +20,26 @@ interface ConfirmationDialog {
   userName: string;
 }
 
+function sortByNewest(requests: ApprovalRequest[]): ApprovalRequest[] {
+  return [...requests].sort((a, b) => {
+    const dateA = a.approval_decided_at || a.approval_requested_at || "";
+    const dateB = b.approval_decided_at || b.approval_requested_at || "";
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
+}
+
 export default function ApprovalsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected">("pending");
+  const [activeTab, setActiveTab] = useState<
+    "pending" | "approved" | "rejected"
+  >("pending");
   const [pendingRequests, setPendingRequests] = useState<ApprovalRequest[]>([]);
-  const [approvedRequests, setApprovedRequests] = useState<ApprovalRequest[]>([]);
-  const [rejectedRequests, setRejectedRequests] = useState<ApprovalRequest[]>([]);
+  const [approvedRequests, setApprovedRequests] = useState<ApprovalRequest[]>(
+    [],
+  );
+  const [rejectedRequests, setRejectedRequests] = useState<ApprovalRequest[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rejectingId, setRejectingId] = useState<number | null>(null);
@@ -53,38 +52,42 @@ export default function ApprovalsPage() {
     userName: "",
   });
 
-  const sortByNewest = (requests: ApprovalRequest[]): ApprovalRequest[] => {
-    return [...requests].sort((a, b) => {
-      const dateA = a.approval_decided_at || a.approval_requested_at || "";
-      const dateB = b.approval_decided_at || b.approval_requested_at || "";
-      return new Date(dateB).getTime() - new Date(dateA).getTime();
-    });
-  };
-
-  const loadAllApprovals = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const [pending, approved, rejected] = await Promise.all([
-        getAdminApprovals(),
-        getApprovedOrgAdmins(),
-        getRejectedOrgAdmins(),
-      ]);
-      setPendingRequests(sortByNewest(pending));
-      setApprovedRequests(sortByNewest(approved));
-      setRejectedRequests(sortByNewest(rejected));
-    } catch (err: unknown) {
-      const error = err as Error;
-      setError("Failed to load approval requests");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadAllApprovals();
-  }, [loadAllApprovals]);
+    let cancelled = false;
+
+    const loadAllApprovals = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const [pending, approved, rejected] = await Promise.all([
+          getAdminApprovals(),
+          getApprovedOrgAdmins(),
+          getRejectedOrgAdmins(),
+        ]);
+
+        if (cancelled) return;
+
+        setPendingRequests(sortByNewest(pending));
+        setApprovedRequests(sortByNewest(approved));
+        setRejectedRequests(sortByNewest(rejected));
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError("Failed to load approval requests");
+          console.error(err);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadAllApprovals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleApprove = async (id: number) => {
     const request = pendingRequests.find((r) => r.id === id);
@@ -103,10 +106,12 @@ export default function ApprovalsPage() {
 
     try {
       const result = await approveOrgAdmin(confirmDialog.userId);
-      setPendingRequests(
-        pendingRequests.filter((r) => r.id !== confirmDialog.userId),
+      setPendingRequests((current) =>
+        current.filter((r) => r.id !== confirmDialog.userId),
       );
-      setApprovedRequests([...approvedRequests, result.user]);
+      if (result.user) {
+        setApprovedRequests((current) => [...current, result.user]);
+      }
       setConfirmDialog({
         isOpen: false,
         type: null,
@@ -114,8 +119,8 @@ export default function ApprovalsPage() {
         userName: "",
       });
       alert("Admin approved successfully!");
-    } catch (err: any) {
-      setError(err.message || "Failed to approve");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to approve");
       setConfirmDialog({
         isOpen: false,
         type: null,
@@ -157,11 +162,11 @@ export default function ApprovalsPage() {
         confirmDialog.userId,
         rejectionReason,
       );
-      setPendingRequests(
-        pendingRequests.filter((r) => r.id !== confirmDialog.userId),
+      setPendingRequests((current) =>
+        current.filter((r) => r.id !== confirmDialog.userId),
       );
       if (result.user) {
-        setRejectedRequests([...rejectedRequests, result.user]);
+        setRejectedRequests((current) => [...current, result.user]);
       }
       setRejectingId(null);
       setRejectionReason("");
@@ -172,8 +177,8 @@ export default function ApprovalsPage() {
         userName: "",
       });
       alert("Request rejected successfully!");
-    } catch (err: any) {
-      setError(err.message || "Failed to reject");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to reject");
       setConfirmDialog({
         isOpen: false,
         type: null,
@@ -282,7 +287,7 @@ export default function ApprovalsPage() {
                         rejectingId={rejectingId}
                         rejectionReason={rejectionReason}
                         onApprove={handleApprove}
-                        onRejectStart={() => setRejectingId(req.id)}
+                        onRejectStart={() => handleReject(req.id)}
                         onRejectCancel={() => {
                           setRejectingId(null);
                           setRejectionReason("");

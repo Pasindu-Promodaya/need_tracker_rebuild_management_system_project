@@ -89,7 +89,7 @@ export default function DonateModal({
     try {
       const { createDonation } = await import("@/lib/api");
 
-      const donationData: any = {
+      const donationData: Partial<Donation> = {
         need_item: needItem.id,
         quantity: quantity,
         status: "PENDING",
@@ -144,14 +144,16 @@ export default function DonateModal({
         onSuccess();
         onClose();
       }, 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsLoading(false);
-      if (err.message && err.message.includes("401")) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create donation";
+      if (message.includes("401")) {
         setError("Your session has expired. Please sign in again.");
-      } else if (err.message && err.message.includes("credentials")) {
+      } else if (message.includes("credentials")) {
         setError("Authentication failed. Please sign in again.");
       } else {
-        setError(err.message || "Failed to create donation");
+        setError(message);
       }
     }
   };

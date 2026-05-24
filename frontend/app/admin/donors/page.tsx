@@ -28,7 +28,9 @@ export default function DonorsPage() {
 
   useEffect(() => {
     if (user && user.role === "ADMIN") {
-      loadDonors();
+      queueMicrotask(() => {
+        void loadDonors();
+      });
 
       // Auto-refresh data every 30 seconds for real-time updates
       const interval = setInterval(() => {
@@ -37,7 +39,7 @@ export default function DonorsPage() {
 
       return () => clearInterval(interval);
     } else {
-      setLoading(false);
+      queueMicrotask(() => setLoading(false));
     }
   }, [user, loadDonors]);
 

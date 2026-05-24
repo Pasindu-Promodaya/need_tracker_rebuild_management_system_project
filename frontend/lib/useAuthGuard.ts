@@ -13,10 +13,10 @@ export function useAuthGuard() {
   useEffect(() => {
     if (!isLoading) {
       if (!user && pathname !== "/login") {
-        setAuthorized(false);
+        queueMicrotask(() => setAuthorized(false));
         router.push("/login");
       } else {
-        setAuthorized(true);
+        queueMicrotask(() => setAuthorized(true));
       }
     }
   }, [user, isLoading, router, pathname]);
@@ -37,13 +37,13 @@ export function useAdminGuard() {
   useEffect(() => {
     if (!isLoading) {
       if (!user && pathname !== "/login") {
-        setAuthorized(false);
+        queueMicrotask(() => setAuthorized(false));
         router.push("/login");
       } else if (user && user.role === "DONOR") {
-        setAuthorized(false);
+        queueMicrotask(() => setAuthorized(false));
         router.push("/");
       } else if (user) {
-        setAuthorized(true);
+        queueMicrotask(() => setAuthorized(true));
       }
     }
   }, [user, isLoading, router, pathname]);

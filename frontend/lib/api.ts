@@ -31,6 +31,58 @@ export interface AuthResponse {
   user?: User; // Optional because standard JWT response might only have tokens, but we'll try to include user or fetch it separately
 }
 
+export interface RegisterUserData {
+  username: string;
+  email: string;
+  password: string;
+  password2: string;
+  phone_number: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface RegisterOrgAdminData extends RegisterUserData {
+  organization_name: string;
+  organization_type?: string;
+}
+
+export interface OrgAdminInviteData {
+  username: string;
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface AdminApprovalRequest {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  approval_status: "PENDING" | "APPROVED" | "REJECTED";
+  organization_name: string;
+  organization_type: string;
+  rejection_reason?: string;
+  approval_requested_at?: string;
+  approval_decided_at?: string;
+  approval_decided_by_username?: string;
+}
+
+export interface ApprovalActionResponse {
+  message?: string;
+  user?: AdminApprovalRequest;
+}
+
+interface ApiListResponse<T> {
+  results?: T[];
+}
+
+function unwrapListResponse<T>(response: ApiListResponse<T> | T[]): T[] {
+  return Array.isArray(response) ? response : response.results || [];
+}
+
 export interface NeedItem {
   id: number;
   section: number;
@@ -274,62 +326,73 @@ export async function loginUser(
   });
 }
 
-export async function registerUser(data: any): Promise<AuthResponse> {
+export async function registerUser(
+  data: RegisterUserData,
+): Promise<AuthResponse> {
   return fetchAPI<AuthResponse>("/auth/register/", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function registerOrgAdmin(data: {
-  username: string;
-  password: string;
-  password2: string;
-  email: string;
-  phone_number: string;
-  first_name: string;
-  last_name: string;
-  organization_name: string;
-  organization_type?: string;
-}): Promise<any> {
-  return fetchAPI<any>("/auth/register-org-admin/", {
+export async function registerOrgAdmin(
+  data: RegisterOrgAdminData,
+): Promise<AuthResponse> {
+  return fetchAPI<AuthResponse>("/auth/register-org-admin/", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function getAdminApprovals(): Promise<any> {
-  return fetchAPI<any>("/admin/approvals/", {
+export async function getAdminApprovals(): Promise<AdminApprovalRequest[]> {
+  const response = await fetchAPI<
+    ApiListResponse<AdminApprovalRequest> | AdminApprovalRequest[]
+  >("/admin/approvals/", {
     method: "GET",
   });
+  return unwrapListResponse(response);
 }
 
-export async function approveOrgAdmin(userId: number): Promise<any> {
-  return fetchAPI<any>(`/admin/approvals/${userId}/approve/`, {
-    method: "POST",
-  });
+export async function approveOrgAdmin(
+  userId: number,
+): Promise<ApprovalActionResponse> {
+  return fetchAPI<ApprovalActionResponse>(
+    `/admin/approvals/${userId}/approve/`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export async function rejectOrgAdmin(
   userId: number,
   reason: string,
-): Promise<any> {
-  return fetchAPI<any>(`/admin/approvals/${userId}/reject/`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  });
+): Promise<ApprovalActionResponse> {
+  return fetchAPI<ApprovalActionResponse>(
+    `/admin/approvals/${userId}/reject/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    },
+  );
 }
 
-export async function getApprovedOrgAdmins(): Promise<any> {
-  return fetchAPI<any>("/admin/approvals/approved_list/", {
+export async function getApprovedOrgAdmins(): Promise<AdminApprovalRequest[]> {
+  const response = await fetchAPI<
+    ApiListResponse<AdminApprovalRequest> | AdminApprovalRequest[]
+  >("/admin/approvals/approved_list/", {
     method: "GET",
   });
+  return unwrapListResponse(response);
 }
 
-export async function getRejectedOrgAdmins(): Promise<any> {
-  return fetchAPI<any>("/admin/approvals/rejected_list/", {
+export async function getRejectedOrgAdmins(): Promise<AdminApprovalRequest[]> {
+  const response = await fetchAPI<
+    ApiListResponse<AdminApprovalRequest> | AdminApprovalRequest[]
+  >("/admin/approvals/rejected_list/", {
     method: "GET",
   });
+  return unwrapListResponse(response);
 }
 
 export async function getCurrentUser(): Promise<User> {
@@ -357,8 +420,10 @@ export async function updateCurrentUser(data: {
 
 // Organizations
 export const getOrganizations = async () => {
-  const response = await fetchAPI<any>("/organizations/");
-  return (response.results || response) as Organization[];
+  const response = await fetchAPI<
+    ApiListResponse<Organization> | Organization[]
+  >("/organizations/");
+  return unwrapListResponse(response);
 };
 export const getOrganization = (id: number) =>
   fetchAPI<Organization>(`/organizations/${id}/`);
@@ -377,19 +442,25 @@ export const updateOrganization = (id: number, data: Partial<Organization>) =>
 export const deleteOrganization = (id: number) =>
   fetchAPI(`/organizations/${id}/`, { method: "DELETE" });
 
-export const getOrgAdmins = (orgId: number) =>
-  fetchAPI<any[]>(`/organizations/${orgId}/admins/`);
+export const getOrgAdmins = async (orgId: number) => {
+  const response = await fetchAPI<ApiListResponse<User> | User[]>(
+    `/organizations/${orgId}/admins/`,
+  );
+  return unwrapListResponse(response);
+};
 
-export const inviteOrgAdmin = (orgId: number, data: any) =>
-  fetchAPI<any>(`/organizations/${orgId}/invite_admin/`, {
+export const inviteOrgAdmin = (orgId: number, data: OrgAdminInviteData) =>
+  fetchAPI<{ message?: string }>(`/organizations/${orgId}/invite_admin/`, {
     method: "POST",
     body: JSON.stringify(data),
   });
 
 // Sections
 export const getSections = async () => {
-  const response = await fetchAPI<any>("/sections/");
-  return (response.results || response) as Section[];
+  const response = await fetchAPI<ApiListResponse<Section> | Section[]>(
+    "/sections/",
+  );
+  return unwrapListResponse(response);
 };
 export const getSection = (id: number) => fetchAPI<Section>(`/sections/${id}/`);
 export const createSection = (data: Partial<Section>) =>
@@ -414,8 +485,10 @@ export const getNeeds = async (
   if (priority) params.append("priority", priority);
   if (excludeFulfilled) params.append("exclude_fulfilled", "true");
   const query = params.toString() ? `?${params.toString()}` : "";
-  const response = await fetchAPI<any>(query ? `/needs/${query}` : "/needs/");
-  return (response.results || response) as NeedItem[];
+  const response = await fetchAPI<ApiListResponse<NeedItem> | NeedItem[]>(
+    query ? `/needs/${query}` : "/needs/",
+  );
+  return unwrapListResponse(response);
 };
 export const getNeed = (id: number) => fetchAPI<NeedItem>(`/needs/${id}/`);
 export const createNeed = (data: Partial<NeedItem>) =>
@@ -430,8 +503,10 @@ export const deleteNeed = (id: number) =>
 
 // Documents
 export const getDocuments = async () => {
-  const response = await fetchAPI<any>("/documents/");
-  return (response.results || response) as DocumentUpload[];
+  const response = await fetchAPI<
+    ApiListResponse<DocumentUpload> | DocumentUpload[]
+  >("/documents/");
+  return unwrapListResponse(response);
 };
 export const uploadDocument = async (
   file: File,
@@ -472,8 +547,10 @@ export const createDonation = (data: Partial<Donation>) =>
   });
 
 export const getDonations = async () => {
-  const response = await fetchAPI<any>("/donations/");
-  return (response.results || response) as Donation[];
+  const response = await fetchAPI<ApiListResponse<Donation> | Donation[]>(
+    "/donations/",
+  );
+  return unwrapListResponse(response);
 };
 
 export const getDonation = (id: number) =>
@@ -486,10 +563,10 @@ export const updateDonation = (id: number, data: Partial<Donation>) =>
   });
 
 export const confirmDonation = (id: number) =>
-  fetchAPI<any>(`/donations/${id}/confirm/`, { method: "POST" });
+  fetchAPI<void>(`/donations/${id}/confirm/`, { method: "POST" });
 
 export const cancelDonation = (id: number) =>
-  fetchAPI<any>(`/donations/${id}/cancel/`, { method: "POST" });
+  fetchAPI<void>(`/donations/${id}/cancel/`, { method: "POST" });
 
 export const deleteDonation = (id: number) =>
   fetchAPI<void>(`/donations/${id}/`, { method: "DELETE" });
@@ -565,6 +642,8 @@ export async function search(
 
 // Donors
 export const getDonors = async () => {
-  const response = await fetchAPI<any>("/donors/");
-  return (response.results || response) as DonorUser[];
+  const response = await fetchAPI<ApiListResponse<DonorUser> | DonorUser[]>(
+    "/donors/",
+  );
+  return unwrapListResponse(response);
 };

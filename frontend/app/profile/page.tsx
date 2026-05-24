@@ -34,11 +34,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      setProfileForm({
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
-        email: user.email || "",
-        phone_number: user.phone_number || "",
+      queueMicrotask(() => {
+        setProfileForm({
+          first_name: user.first_name || "",
+          last_name: user.last_name || "",
+          email: user.email || "",
+          phone_number: user.phone_number || "",
+        });
       });
     }
   }, [user]);
@@ -54,7 +56,9 @@ export default function ProfilePage() {
       setMessage("Profile updated successfully.");
       setTimeout(() => setMessage(null), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update profile.");
+      setError(
+        err instanceof Error ? err.message : "Failed to update profile.",
+      );
     } finally {
       setSaving(false);
     }
@@ -75,7 +79,9 @@ export default function ProfilePage() {
       setMessage("Password changed successfully.");
       setTimeout(() => setMessage(null), 3000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to change password.");
+      setError(
+        err instanceof Error ? err.message : "Failed to change password.",
+      );
     } finally {
       setSaving(false);
     }
@@ -99,12 +105,18 @@ export default function ProfilePage() {
               <div className="inline-block px-3 py-1 bg-white/10 rounded-lg text-[10px] font-bold tracking-widest uppercase mb-4">
                 User Profile
               </div>
-              <h1 className="text-4xl font-black tracking-tight">{user.username}</h1>
+              <h1 className="text-4xl font-black tracking-tight">
+                {user.username}
+              </h1>
               <p className="text-blue-100 mt-2 text-sm max-w-xl">
-                Manage your personal information and account security settings. Current login session is active.
+                Manage your personal information and account security settings.
+                Current login session is active.
               </p>
             </div>
-            <Link href="/" className="bg-white text-blue-700 px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:bg-slate-50 transition-all">
+            <Link
+              href="/"
+              className="bg-white text-blue-700 px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:bg-slate-50 transition-all"
+            >
               Back to Home
             </Link>
           </div>
@@ -113,7 +125,6 @@ export default function ProfilePage() {
 
       {/* Profile Content - Matches two-column layout in Image 2 */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20">
-        
         {message && (
           <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
             <UserCircle size={20} className="text-emerald-500" />
@@ -129,7 +140,6 @@ export default function ProfilePage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
           {/* Profile Details Section */}
           <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
             <div className="flex items-center gap-4 mb-8">
@@ -137,51 +147,86 @@ export default function ProfilePage() {
                 <User className="text-blue-600" size={24} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Profile details</h2>
-                <p className="text-xs text-slate-500 font-medium">Your basic account information</p>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Profile details
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Your basic account information
+                </p>
               </div>
             </div>
 
             <form onSubmit={handleProfileSave} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">First Name</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                    First Name
+                  </label>
                   <input
                     value={profileForm.first_name}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, first_name: e.target.value }))}
+                    onChange={(e) =>
+                      setProfileForm((p) => ({
+                        ...p,
+                        first_name: e.target.value,
+                      }))
+                    }
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Last Name</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                    Last Name
+                  </label>
                   <input
                     value={profileForm.last_name}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, last_name: e.target.value }))}
+                    onChange={(e) =>
+                      setProfileForm((p) => ({
+                        ...p,
+                        last_name: e.target.value,
+                      }))
+                    }
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  Email
+                </label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Mail
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={18}
+                  />
                   <input
                     type="email"
                     value={profileForm.email}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, email: e.target.value }))}
+                    onChange={(e) =>
+                      setProfileForm((p) => ({ ...p, email: e.target.value }))
+                    }
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Phone Number</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  Phone Number
+                </label>
                 <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Phone
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={18}
+                  />
                   <input
                     value={profileForm.phone_number}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, phone_number: e.target.value }))}
+                    onChange={(e) =>
+                      setProfileForm((p) => ({
+                        ...p,
+                        phone_number: e.target.value,
+                      }))
+                    }
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                   />
                 </div>
@@ -205,38 +250,63 @@ export default function ProfilePage() {
                 <Lock className="text-rose-600" size={24} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Change password</h2>
-                <p className="text-xs text-slate-500 font-medium">Keep your account secure</p>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Change password
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Keep your account secure
+                </p>
               </div>
             </div>
 
             <form onSubmit={handlePasswordSave} className="space-y-6">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Current password</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  Current password
+                </label>
                 <input
                   type="password"
                   value={passwordForm.current_password}
-                  onChange={(e) => setPasswordForm((p) => ({ ...p, current_password: e.target.value }))}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({
+                      ...p,
+                      current_password: e.target.value,
+                    }))
+                  }
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">New password</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  New password
+                </label>
                 <input
                   type="password"
                   value={passwordForm.new_password}
-                  onChange={(e) => setPasswordForm((p) => ({ ...p, new_password: e.target.value }))}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({
+                      ...p,
+                      new_password: e.target.value,
+                    }))
+                  }
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Confirm new password</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  Confirm new password
+                </label>
                 <input
                   type="password"
                   value={passwordForm.new_password2}
-                  onChange={(e) => setPasswordForm((p) => ({ ...p, new_password2: e.target.value }))}
+                  onChange={(e) =>
+                    setPasswordForm((p) => ({
+                      ...p,
+                      new_password2: e.target.value,
+                    }))
+                  }
                   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -250,7 +320,6 @@ export default function ProfilePage() {
               </button>
             </form>
           </div>
-
         </div>
       </div>
     </div>

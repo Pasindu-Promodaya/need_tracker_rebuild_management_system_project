@@ -94,11 +94,12 @@ export default function ManualNeedEntryForm({
         onSuccess();
         onClose();
       }, 1200);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error saving need:", err);
       const errorMessage =
-        err?.message ||
-        "Failed to save the need. Please check your inputs and try again.";
+        err instanceof Error
+          ? err.message
+          : "Failed to save the need. Please check your inputs and try again.";
       setError(errorMessage);
     } finally {
       setSubmitting(false);

@@ -22,12 +22,41 @@ import {
   HeartHandshake,
   FileText,
   BarChart3,
-  ArrowRight,
   PieChart,
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import type { ReactNode } from "react";
+
+interface SectionMetric {
+  label: string;
+  value: number;
+  total: number;
+  percentage: number;
+  status: "success" | "critical" | "warning";
+}
+
+interface ChartDataPoint {
+  name: string;
+  donations: number;
+  confirmed: number;
+}
+
+const controlTileStyles = {
+  blue: "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20",
+  emerald:
+    "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20",
+  indigo:
+    "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20",
+  rose: "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20",
+  violet:
+    "bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20",
+  amber:
+    "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20",
+} as const;
+
+type ControlTileColor = keyof typeof controlTileStyles;
 
 export default function OrgAdminDashboard() {
   const router = useRouter();
@@ -44,9 +73,9 @@ export default function OrgAdminDashboard() {
     fulfillmentRate: 0,
     monthlyGrowth: 0,
     donationRate: 0,
-    sectionMetrics: [] as any[],
-    monthlyData: [] as any[],
-    yearlyData: [] as any[],
+    sectionMetrics: [] as SectionMetric[],
+    monthlyData: [] as ChartDataPoint[],
+    yearlyData: [] as ChartDataPoint[],
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -192,7 +221,7 @@ export default function OrgAdminDashboard() {
 
         const last6Months = [];
         for (let i = 5; i >= 0; i--) {
-          let d = new Date(currentYear, currentMonth - i, 1);
+          const d = new Date(currentYear, currentMonth - i, 1);
           last6Months.push({
             name: months[d.getMonth()],
             month: d.getMonth(),
@@ -311,7 +340,7 @@ export default function OrgAdminDashboard() {
               Organization Dashboard
             </h1>
             <p className="text-slate-500 mt-1">
-              Manage your organization's needs and monitor impact
+              Manage your organization&apos;s needs and monitor impact
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -529,26 +558,14 @@ function ControlTile({
 }: {
   label: string;
   desc: string;
-  icon: any;
+  icon: ReactNode;
   href: string;
-  color: string;
+  color: ControlTileColor;
 }) {
-  const colorMap: any = {
-    blue: "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20",
-    emerald:
-      "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20",
-    indigo:
-      "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20",
-    rose: "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20",
-    violet:
-      "bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20",
-    amber:
-      "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20",
-  };
   return (
     <Link
       href={href}
-      className={`p-6 rounded-2xl border transition-all hover:-translate-y-1 ${colorMap[color]}`}
+      className={`p-6 rounded-2xl border transition-all hover:-translate-y-1 ${controlTileStyles[color]}`}
     >
       <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-4">
         {icon}

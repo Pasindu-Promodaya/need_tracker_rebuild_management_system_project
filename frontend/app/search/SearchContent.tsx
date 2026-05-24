@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { search, SearchResult, Organization, NeedItem } from "@/lib/api";
@@ -12,7 +12,8 @@ import { Search, ChevronRight } from "lucide-react";
 export default function SearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
-  const initialType = (searchParams.get("type") as any) || "all";
+  const initialType =
+    (searchParams.get("type") as "all" | "organization" | "need") || "all";
 
   const [query, setQuery] = useState(initialQuery);
   const [searchType, setSearchType] = useState(initialType);
@@ -21,7 +22,7 @@ export default function SearchContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const performSearch = async () => {
+  const performSearch = useCallback(async () => {
     if (!query.trim() || query.length < 2) {
       setError("Search query must be at least 2 characters");
       return;
@@ -37,19 +38,21 @@ export default function SearchContent() {
         excludeFulfilled: true,
       });
       setResults(data);
-    } catch (err: any) {
-      setError(err.message || "Search failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Search failed");
     } finally {
       setLoading(false);
     }
-  };
+  }, [query, searchType, priority]);
 
   // Auto-search when query changes from URL params
   useEffect(() => {
     if (initialQuery) {
-      performSearch();
+      queueMicrotask(() => {
+        void performSearch();
+      });
     }
-  }, []);
+  }, [initialQuery, performSearch]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +103,11 @@ export default function SearchContent() {
                 <select
                   id="search-type"
                   value={searchType}
-                  onChange={(e) => setSearchType(e.target.value as any)}
+                  onChange={(e) =>
+                    setSearchType(
+                      e.target.value as "all" | "organization" | "need",
+                    )
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All</option>
@@ -171,8 +178,8 @@ export default function SearchContent() {
                   {results.total}
                 </span>{" "}
                 result
-                {results.total !== 1 ? "s" : ""} for "
-                <span className="font-semibold">{query}</span>"
+                {results.total !== 1 ? "s" : ""} for &quot;
+                <span className="font-semibold">{query}</span>&quot;
               </p>
             </div>
 
@@ -222,8 +229,8 @@ export default function SearchContent() {
                 <div className="text-center py-12">
                   <Search className="mx-auto text-gray-400 mb-4" size={48} />
                   <p className="text-gray-600 text-lg">
-                    No results found for "
-                    <span className="font-semibold">{query}</span>"
+                    No results found for &quot;
+                    <span className="font-semibold">{query}</span>&quot;
                   </p>
                   <p className="text-gray-500 mt-2">
                     Try searching with different keywords
