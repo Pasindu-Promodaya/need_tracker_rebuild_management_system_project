@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const currentUser = await getCurrentUser();
           setUser(currentUser);
         }
-      } catch (err) {
+      } catch {
         // Token might be invalid
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -78,11 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await loginUser(username, password);
       
       // Store tokens
-      if (response.access) {
-        localStorage.setItem('accessToken', response.access);
+      const tokens = response as { access?: string; refresh?: string };
+      if (tokens.access) {
+        localStorage.setItem('accessToken', tokens.access);
       }
-      if (response.refresh) {
-        localStorage.setItem('refreshToken', response.refresh);
+      if (tokens.refresh) {
+        localStorage.setItem('refreshToken', tokens.refresh);
       }
 
       // Fetch and set user
@@ -121,11 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await registerUser(data);
 
       // Store tokens if provided
-      if (response.access) {
-        localStorage.setItem('accessToken', response.access);
+      const tokens = response as { access?: string; refresh?: string };
+      if (tokens.access) {
+        localStorage.setItem('accessToken', tokens.access);
       }
-      if (response.refresh) {
-        localStorage.setItem('refreshToken', response.refresh);
+      if (tokens.refresh) {
+        localStorage.setItem('refreshToken', tokens.refresh);
       }
 
       // Fetch and set user
@@ -159,11 +161,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await registerOrgAdmin(data);
 
       // Store tokens if provided
-      if (response.access) {
-        localStorage.setItem('accessToken', response.access);
+      const tokens = response as { access?: string; refresh?: string };
+      if (tokens.access) {
+        localStorage.setItem('accessToken', tokens.access);
       }
-      if (response.refresh) {
-        localStorage.setItem('refreshToken', response.refresh);
+      if (tokens.refresh) {
+        localStorage.setItem('refreshToken', tokens.refresh);
       }
 
       // Fetch and set user

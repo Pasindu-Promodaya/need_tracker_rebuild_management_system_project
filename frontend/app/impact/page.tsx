@@ -45,11 +45,15 @@ export default function ImpactPage() {
       // Check if user is authenticated for donation data
       const isAuthenticated = !!localStorage.getItem("accessToken");
 
+<<<<<<< HEAD
       const promises: [
         Promise<Organization[]>,
         Promise<NeedItem[]>,
         Promise<Donation[]> | null,
       ] = [
+=======
+      const promises: [Promise<unknown>, Promise<unknown>, Promise<unknown> | null] = [
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
         getOrganizations(),
         getNeeds(),
         isAuthenticated ? getDonations() : null,
@@ -62,19 +66,19 @@ export default function ImpactPage() {
       const needsLoaded = needsResult.status === "fulfilled";
 
       if (organizationsLoaded) {
-        setOrganizations(orgResult.value);
+        setOrganizations(orgResult.value as Organization[]);
       } else {
         setOrganizations([]);
       }
 
       if (needsLoaded) {
-        setNeeds(needsResult.value);
+        setNeeds(needsResult.value as NeedItem[]);
       } else {
         setNeeds([]);
       }
 
       if (donationResult && donationResult.status === "fulfilled") {
-        setDonations(donationResult.value || []);
+        setDonations((donationResult.value as Donation[]) || []);
       } else {
         setDonations([]);
         if (!isAuthenticated) {

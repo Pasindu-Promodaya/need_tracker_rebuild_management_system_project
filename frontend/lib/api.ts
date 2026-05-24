@@ -326,33 +326,58 @@ export async function loginUser(
   });
 }
 
+<<<<<<< HEAD
 export async function registerUser(
   data: RegisterUserData,
 ): Promise<AuthResponse> {
+=======
+export async function registerUser(data: unknown): Promise<AuthResponse> {
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
   return fetchAPI<AuthResponse>("/auth/register/", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
+<<<<<<< HEAD
 export async function registerOrgAdmin(
   data: RegisterOrgAdminData,
 ): Promise<AuthResponse> {
   return fetchAPI<AuthResponse>("/auth/register-org-admin/", {
+=======
+export async function registerOrgAdmin(data: {
+  username: string;
+  password: string;
+  password2: string;
+  email: string;
+  phone_number: string;
+  first_name: string;
+  last_name: string;
+  organization_name: string;
+  organization_type?: string;
+}): Promise<unknown> {
+  return fetchAPI<unknown>("/auth/register-org-admin/", {
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
+<<<<<<< HEAD
 export async function getAdminApprovals(): Promise<AdminApprovalRequest[]> {
   const response = await fetchAPI<
     ApiListResponse<AdminApprovalRequest> | AdminApprovalRequest[]
   >("/admin/approvals/", {
+=======
+export async function getAdminApprovals(): Promise<unknown> {
+  return fetchAPI<unknown>("/admin/approvals/", {
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
     method: "GET",
   });
   return unwrapListResponse(response);
 }
 
+<<<<<<< HEAD
 export async function approveOrgAdmin(
   userId: number,
 ): Promise<ApprovalActionResponse> {
@@ -362,11 +387,18 @@ export async function approveOrgAdmin(
       method: "POST",
     },
   );
+=======
+export async function approveOrgAdmin(userId: number): Promise<unknown> {
+  return fetchAPI<unknown>(`/admin/approvals/${userId}/approve/`, {
+    method: "POST",
+  });
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 }
 
 export async function rejectOrgAdmin(
   userId: number,
   reason: string,
+<<<<<<< HEAD
 ): Promise<ApprovalActionResponse> {
   return fetchAPI<ApprovalActionResponse>(
     `/admin/approvals/${userId}/reject/`,
@@ -381,15 +413,31 @@ export async function getApprovedOrgAdmins(): Promise<AdminApprovalRequest[]> {
   const response = await fetchAPI<
     ApiListResponse<AdminApprovalRequest> | AdminApprovalRequest[]
   >("/admin/approvals/approved_list/", {
+=======
+): Promise<unknown> {
+  return fetchAPI<unknown>(`/admin/approvals/${userId}/reject/`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function getApprovedOrgAdmins(): Promise<unknown> {
+  return fetchAPI<unknown>("/admin/approvals/approved_list/", {
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
     method: "GET",
   });
   return unwrapListResponse(response);
 }
 
+<<<<<<< HEAD
 export async function getRejectedOrgAdmins(): Promise<AdminApprovalRequest[]> {
   const response = await fetchAPI<
     ApiListResponse<AdminApprovalRequest> | AdminApprovalRequest[]
   >("/admin/approvals/rejected_list/", {
+=======
+export async function getRejectedOrgAdmins(): Promise<unknown> {
+  return fetchAPI<unknown>("/admin/approvals/rejected_list/", {
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
     method: "GET",
   });
   return unwrapListResponse(response);
@@ -420,10 +468,15 @@ export async function updateCurrentUser(data: {
 
 // Organizations
 export const getOrganizations = async () => {
+<<<<<<< HEAD
   const response = await fetchAPI<
     ApiListResponse<Organization> | Organization[]
   >("/organizations/");
   return unwrapListResponse(response);
+=======
+  const response = await fetchAPI<unknown>("/organizations/");
+  return ((response as { results?: Organization[] }).results || response) as Organization[];
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 };
 export const getOrganization = (id: number) =>
   fetchAPI<Organization>(`/organizations/${id}/`);
@@ -457,10 +510,15 @@ export const inviteOrgAdmin = (orgId: number, data: OrgAdminInviteData) =>
 
 // Sections
 export const getSections = async () => {
+<<<<<<< HEAD
   const response = await fetchAPI<ApiListResponse<Section> | Section[]>(
     "/sections/",
   );
   return unwrapListResponse(response);
+=======
+  const response = await fetchAPI<unknown>("/sections/");
+  return ((response as { results?: Section[] }).results || response) as Section[];
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 };
 export const getSection = (id: number) => fetchAPI<Section>(`/sections/${id}/`);
 export const createSection = (data: Partial<Section>) =>
@@ -485,10 +543,15 @@ export const getNeeds = async (
   if (priority) params.append("priority", priority);
   if (excludeFulfilled) params.append("exclude_fulfilled", "true");
   const query = params.toString() ? `?${params.toString()}` : "";
+<<<<<<< HEAD
   const response = await fetchAPI<ApiListResponse<NeedItem> | NeedItem[]>(
     query ? `/needs/${query}` : "/needs/",
   );
   return unwrapListResponse(response);
+=======
+  const response = await fetchAPI<unknown>(query ? `/needs/${query}` : "/needs/");
+  return ((response as { results?: NeedItem[] }).results || response) as NeedItem[];
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 };
 export const getNeed = (id: number) => fetchAPI<NeedItem>(`/needs/${id}/`);
 export const createNeed = (data: Partial<NeedItem>) =>
@@ -503,10 +566,15 @@ export const deleteNeed = (id: number) =>
 
 // Documents
 export const getDocuments = async () => {
+<<<<<<< HEAD
   const response = await fetchAPI<
     ApiListResponse<DocumentUpload> | DocumentUpload[]
   >("/documents/");
   return unwrapListResponse(response);
+=======
+  const response = await fetchAPI<unknown>("/documents/");
+  return ((response as { results?: DocumentUpload[] }).results || response) as DocumentUpload[];
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 };
 export const uploadDocument = async (
   file: File,
@@ -547,10 +615,15 @@ export const createDonation = (data: Partial<Donation>) =>
   });
 
 export const getDonations = async () => {
+<<<<<<< HEAD
   const response = await fetchAPI<ApiListResponse<Donation> | Donation[]>(
     "/donations/",
   );
   return unwrapListResponse(response);
+=======
+  const response = await fetchAPI<unknown>("/donations/");
+  return ((response as { results?: Donation[] }).results || response) as Donation[];
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 };
 
 export const getDonation = (id: number) =>
@@ -563,10 +636,17 @@ export const updateDonation = (id: number, data: Partial<Donation>) =>
   });
 
 export const confirmDonation = (id: number) =>
+<<<<<<< HEAD
   fetchAPI<void>(`/donations/${id}/confirm/`, { method: "POST" });
 
 export const cancelDonation = (id: number) =>
   fetchAPI<void>(`/donations/${id}/cancel/`, { method: "POST" });
+=======
+  fetchAPI<unknown>(`/donations/${id}/confirm/`, { method: "POST" });
+
+export const cancelDonation = (id: number) =>
+  fetchAPI<unknown>(`/donations/${id}/cancel/`, { method: "POST" });
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 
 export const deleteDonation = (id: number) =>
   fetchAPI<void>(`/donations/${id}/`, { method: "DELETE" });

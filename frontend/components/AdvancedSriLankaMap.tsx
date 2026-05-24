@@ -5,7 +5,12 @@ import type { Map as LeafletMap } from "leaflet";
 import { Organization } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
 
+<<<<<<< HEAD
 let L: typeof import("leaflet") | null = null;
+=======
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let L: any = null;
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 
 const initLeaflet = async () => {
   if (!L) {
@@ -54,7 +59,12 @@ export default function AdvancedSriLankaMap({
   organizations = [],
 }: AdvancedSriLankaMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
+<<<<<<< HEAD
   const map = useRef<LeafletMap | null>(null);
+=======
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const map = useRef<any>(null);
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mappedOrganizations, setMappedOrganizations] = useState(0);
@@ -78,11 +88,16 @@ export default function AdvancedSriLankaMap({
 
         // In React Strict Mode, effects can run twice in development.
         // Reset previous Leaflet binding on the same DOM node before creating a new map.
+<<<<<<< HEAD
         const leafletContainer = container as HTMLElement & {
           _leaflet_id?: number;
         };
         if (leafletContainer._leaflet_id) {
           leafletContainer._leaflet_id = undefined;
+=======
+        if ((container as unknown as { _leaflet_id?: boolean })._leaflet_id) {
+          (container as unknown as { _leaflet_id?: boolean })._leaflet_id = undefined;
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
           container.innerHTML = "";
         }
 
@@ -191,7 +206,7 @@ export default function AdvancedSriLankaMap({
         map.current = null;
       }
     };
-  }, []);
+  }, [organizations]);
 
   return (
     <div className="w-full h-full rounded-xl overflow-hidden shadow-2xl relative">

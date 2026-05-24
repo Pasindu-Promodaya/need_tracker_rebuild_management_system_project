@@ -76,9 +76,13 @@ export default function EditNeedModal({
     } catch (err: unknown) {
       console.error("Error updating need:", err);
       const errorMessage =
+<<<<<<< HEAD
         err instanceof Error
           ? err.message
           : "Failed to update. Please try again.";
+=======
+        (err instanceof Error ? err.message : null) || "Failed to update. Please try again.";
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
       setError(errorMessage);
     } finally {
       setSubmitting(false);

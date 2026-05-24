@@ -33,6 +33,7 @@ export default function ProfilePage() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
+<<<<<<< HEAD
     if (user) {
       queueMicrotask(() => {
         setProfileForm({
@@ -42,8 +43,26 @@ export default function ProfilePage() {
           phone_number: user.phone_number || "",
         });
       });
+=======
+    if (!user) return;
+
+    const newForm = {
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      email: user.email || "",
+      phone_number: user.phone_number || "",
+    };
+
+    if (
+      profileForm.first_name !== newForm.first_name ||
+      profileForm.last_name !== newForm.last_name ||
+      profileForm.email !== newForm.email ||
+      profileForm.phone_number !== newForm.phone_number
+    ) {
+      setTimeout(() => setProfileForm(newForm), 0);
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
     }
-  }, [user]);
+  }, [user, profileForm]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();

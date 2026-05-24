@@ -4,13 +4,9 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  Organization,
   getOrganizations,
   NeedItem,
   getNeeds,
-  Donation,
-  getDonations,
-  Section,
   getSections,
   getDonors,
 } from "@/lib/api";
@@ -21,16 +17,13 @@ import {
   ClipboardList,
   AlertTriangle,
   Search,
-  DollarSign,
   Users,
   FileText,
   BarChart3,
-  ChevronRight,
   ArrowRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -48,7 +41,7 @@ export default function AdminDashboard() {
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [, setError] = useState("");
 
   useEffect(() => {
     if (!authLoading) {
@@ -395,7 +388,11 @@ function StatCard({
   label: string;
   value: number;
   subtext: string;
+<<<<<<< HEAD
   icon: ReactNode;
+=======
+  icon: React.ReactNode;
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
   iconBg: string;
   isWarning?: boolean;
 }) {
@@ -494,7 +491,11 @@ function ControlTile({
 }: {
   label: string;
   desc: string;
+<<<<<<< HEAD
   icon: ReactNode;
+=======
+  icon: React.ReactNode;
+>>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
   href: string;
   color: string;
 }) {
