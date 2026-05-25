@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { Map as LeafletMap } from "leaflet";
 import { Organization } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
-
-type LeafletMap = any;
 
 let L: typeof import("leaflet") | null = null;
 
