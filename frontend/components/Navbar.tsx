@@ -4,13 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { updateCurrentUser } from "@/lib/api";
 import { Search, UserCircle } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
+  const [activeTab, setActiveTab] = useState<"info" | "password">("info");
   const [searchQuery, setSearchQuery] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -27,6 +29,98 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showProfile]);
 
+  const [saving, setSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileForm, setProfileForm] = useState({
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
+    email: user?.email || "",
+  });
+
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    try {
+      const updated = await updateCurrentUser(profileForm);
+      setUser(updated);
+      setProfileSuccess("Profile updated successfully.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to update profile.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: "",
+    new_password: "",
+    new_password2: "",
+  });
+
+  const handlePasswordSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    try {
+      await updateCurrentUser(passwordForm);
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+        new_password2: "",
+      });
+      setProfileSuccess("Password changed successfully.");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to change password.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isAdmin = user?.role === "ADMIN" || user?.role === "ORG_ADMIN";
+
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
+    }
+  };
+
+  const publicNavLinks = [
+    { href: "/", label: "Home" },
+    { href: "/needs", label: "Current Needs" },
+  ];
+
+  const navLinks = isAdmin
+    ? [
+      { href: "/", label: "Dashboard" },
+      { href: "/organizations", label: "Organizations" },
+      { href: "/needs", label: "All Needs" },
+      ...(user?.role === "ADMIN"
+        ? [
+          { href: "/admin/approvals", label: "Approvals" },
+          { href: "/admin/donors", label: "Donors" },
+        ]
+        : []),
+      ...(user?.role === "ORG_ADMIN"
+        ? [
+          { href: "/documents", label: "Documents" },
+          { href: "/admin/donations", label: "Donations" },
+        ]
+        : []),
+    ]
+    : [
+      { href: "/", label: "Dashboard" },
+      { href: "/needs", label: "Current Needs" },
+    ];
 
   const handleNavMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const navEl = navRef.current;
@@ -113,15 +207,29 @@ export default function Navbar() {
                         >
                           Donations
                         </Link>
+                        <Link
+                          href="/org-admin/manage-admins"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/org-admin/manage-admins" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Admins
+                        </Link>
                       </>
                     )}
                     {user.role === "ADMIN" && (
-                      <Link
-                        href="/admin/approvals"
-                        className={`text-sm font-semibold transition-colors ${pathname === "/admin/approvals" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
-                      >
-                        Approvals
-                      </Link>
+                      <>
+                        <Link
+                          href="/admin/approvals"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/admin/approvals" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Approvals
+                        </Link>
+                        <Link
+                          href="/admin/donors"
+                          className={`text-sm font-semibold transition-colors ${pathname === "/admin/donors" ? "text-blue-600" : "text-slate-600 hover:text-blue-600"}`}
+                        >
+                          Donors
+                        </Link>
+                      </>
                     )}
                   </>
                 ) : (
@@ -187,6 +295,12 @@ export default function Navbar() {
                     className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg shadow-lg shadow-blue-600/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
                   >
                     Become a Donor
+                  </Link>
+                  <Link
+                    href="/login?tab=org-admin"
+                    className="text-sm font-bold text-blue-600 bg-white border-2 border-blue-600 hover:bg-blue-50 px-6 py-3 rounded-lg shadow-lg shadow-blue-600/10 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    Register Organization
                   </Link>
                 </div>
               ) : (
