@@ -33,17 +33,6 @@ export default function ProfilePage() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
-<<<<<<< HEAD
-    if (user) {
-      queueMicrotask(() => {
-        setProfileForm({
-          first_name: user.first_name || "",
-          last_name: user.last_name || "",
-          email: user.email || "",
-          phone_number: user.phone_number || "",
-        });
-      });
-=======
     if (!user) return;
 
     const newForm = {
@@ -60,7 +49,6 @@ export default function ProfilePage() {
       profileForm.phone_number !== newForm.phone_number
     ) {
       setTimeout(() => setProfileForm(newForm), 0);
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
     }
   }, [user, profileForm]);
 

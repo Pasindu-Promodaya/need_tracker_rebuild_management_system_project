@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { NeedItem } from "@/lib/api";
+import { Donation, NeedItem } from "@/lib/api";
 import { Loader2, X } from "lucide-react";
 
 export interface DonationFormData {
@@ -88,11 +88,7 @@ export default function DonateModal({
     try {
       const { createDonation } = await import("@/lib/api");
 
-<<<<<<< HEAD
       const donationData: Partial<Donation> = {
-=======
-      const donationData: Record<string, unknown> = {
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
         need_item: needItem.id,
         quantity: quantity,
         status: "PENDING",
@@ -149,7 +145,6 @@ export default function DonateModal({
       }, 3000);
     } catch (err: unknown) {
       setIsLoading(false);
-<<<<<<< HEAD
       const message =
         err instanceof Error ? err.message : "Failed to create donation";
       if (message.includes("401")) {
@@ -158,15 +153,6 @@ export default function DonateModal({
         setError("Authentication failed. Please sign in again.");
       } else {
         setError(message);
-=======
-      const errorMessage = err instanceof Error ? err.message : "";
-      if (errorMessage.includes("401")) {
-        setError("Your session has expired. Please sign in again.");
-      } else if (errorMessage.includes("credentials")) {
-        setError("Authentication failed. Please sign in again.");
-      } else {
-        setError(errorMessage || "Failed to create donation");
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
       }
     }
   };

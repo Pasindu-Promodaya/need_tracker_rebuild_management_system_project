@@ -68,11 +68,7 @@ export default function OrganizationsPage() {
       setOrganizations([]);
       setOrganization(null);
     }
-<<<<<<< HEAD
-  }, [user]);
-=======
   };
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 
   useEffect(() => {
     const loadData = async () => {

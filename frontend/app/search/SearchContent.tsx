@@ -11,15 +11,13 @@ import { Search } from "lucide-react";
 export default function SearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
-<<<<<<< HEAD
   const initialType =
     (searchParams.get("type") as "all" | "organization" | "need") || "all";
-=======
-  const initialType = (searchParams.get("type") as "organization" | "need" | "all") || "all";
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 
   const [query, setQuery] = useState(initialQuery);
-  const [searchType, setSearchType] = useState<"organization" | "need" | "all">(initialType);
+  const [searchType, setSearchType] = useState<"organization" | "need" | "all">(
+    initialType,
+  );
   const [priority, setPriority] = useState("");
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,32 +49,11 @@ export default function SearchContent() {
   // Auto-search when query changes from URL params
   useEffect(() => {
     if (initialQuery) {
-<<<<<<< HEAD
       queueMicrotask(() => {
         void performSearch();
       });
     }
   }, [initialQuery, performSearch]);
-=======
-      const searchData = async () => {
-        setLoading(true);
-        setError("");
-        try {
-          const data = await search(initialQuery, initialType as "all" | "organization" | "need", {
-            limit: 50,
-            excludeFulfilled: true,
-          });
-          setResults(data);
-        } catch (err: unknown) {
-          setError(err instanceof Error ? err.message : "Search failed");
-        } finally {
-          setLoading(false);
-        }
-      };
-      searchData();
-    }
-  }, [initialQuery, initialType]);
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,15 +104,11 @@ export default function SearchContent() {
                 <select
                   id="search-type"
                   value={searchType}
-<<<<<<< HEAD
                   onChange={(e) =>
                     setSearchType(
                       e.target.value as "all" | "organization" | "need",
                     )
                   }
-=======
-                  onChange={(e) => setSearchType(e.target.value as "organization" | "need" | "all")}
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All</option>

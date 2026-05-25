@@ -388,11 +388,7 @@ function StatCard({
   label: string;
   value: number;
   subtext: string;
-<<<<<<< HEAD
-  icon: ReactNode;
-=======
   icon: React.ReactNode;
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
   iconBg: string;
   isWarning?: boolean;
 }) {
@@ -491,11 +487,7 @@ function ControlTile({
 }: {
   label: string;
   desc: string;
-<<<<<<< HEAD
-  icon: ReactNode;
-=======
   icon: React.ReactNode;
->>>>>>> ee8f292309a68b75570710e7368a64d7191a40d6
   href: string;
   color: string;
 }) {
