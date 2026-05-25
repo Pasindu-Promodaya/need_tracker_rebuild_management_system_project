@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Map as LeafletMap } from "leaflet";
 import { Organization } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
+
+type LeafletMap = {
+  fitBounds: (
+    bounds: unknown,
+    options?: { padding?: [number, number]; maxZoom?: number },
+  ) => void;
+  off: () => void;
+  remove: () => void;
+};
 
 let L: typeof import("leaflet") | null = null;
 
@@ -165,7 +173,10 @@ export default function AdvancedSriLankaMap({
           const bounds = LeafletLib.latLngBounds(
             organizationsWithCoordinates.map((entry) => [entry.lat, entry.lng]),
           );
-          map.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 9 });
+          const leafletMap = map.current;
+          if (leafletMap) {
+            leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 9 });
+          }
         }
 
         setMappedOrganizations(organizationsWithCoordinates.length);
