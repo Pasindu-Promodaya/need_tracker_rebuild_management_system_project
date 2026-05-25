@@ -109,8 +109,9 @@ export default function ApprovalsPage() {
       setPendingRequests((current) =>
         current.filter((r) => r.id !== confirmDialog.userId),
       );
-      if (result.user) {
-        setApprovedRequests((current) => [...current, result.user]);
+      const approvedUser = result.user;
+      if (approvedUser) {
+        setApprovedRequests((current) => [...current, approvedUser]);
       }
       setConfirmDialog({
         isOpen: false,
@@ -165,8 +166,9 @@ export default function ApprovalsPage() {
       setPendingRequests((current) =>
         current.filter((r) => r.id !== confirmDialog.userId),
       );
-      if (result.user) {
-        setRejectedRequests((current) => [...current, result.user]);
+      const rejectedUser = result.user;
+      if (rejectedUser) {
+        setRejectedRequests((current) => [...current, rejectedUser]);
       }
       setRejectingId(null);
       setRejectionReason("");

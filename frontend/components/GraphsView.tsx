@@ -19,7 +19,7 @@ interface LegendItem {
 }
 
 interface LegendContentProps {
-  payload?: LegendItem[];
+  payload?: readonly LegendItem[];
 }
 
 interface DonationAnalytics {
@@ -145,7 +145,10 @@ export default function GraphsView({
                 <Legend
                   verticalAlign="top"
                   align="right"
-                  content={({ payload }: LegendContentProps) => {
+                  content={(props) => {
+                    const payload = props.payload as
+                      | readonly LegendItem[]
+                      | undefined;
                     const sortedPayload = payload
                       ? [...payload].sort((a, b) => {
                           if (a.value === "Donations") return -1;

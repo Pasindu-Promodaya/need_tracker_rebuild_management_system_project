@@ -111,7 +111,7 @@ export default function DonationsPage() {
       isOpen: true,
       type: "confirm",
       donationId,
-      donationDetails: donation,
+      donationDetails: donation ?? null,
     });
   };
 
@@ -143,7 +143,7 @@ export default function DonationsPage() {
       isOpen: true,
       type: "cancel",
       donationId,
-      donationDetails: donation,
+      donationDetails: donation ?? null,
     });
   };
 
@@ -299,7 +299,7 @@ export default function DonationsPage() {
             <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
               <span className="text-gray-500 font-medium">Quantity</span>
               <span className="col-span-2 text-gray-900">
-                {donation.quantity} {donation.units || "UNIT"}
+                {donation.quantity} {donation.need_item_detail?.unit || "UNIT"}
               </span>
             </div>
 

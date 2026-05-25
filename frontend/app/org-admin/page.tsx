@@ -192,32 +192,36 @@ export default function OrgAdminDashboard() {
             : 0;
 
         // Section Metrics
-        const sectionMetrics = (myOrg.sections || []).map((section) => {
-          const sectionNeeds = myNeeds.filter((n) => n.section === section.id);
-          const received = sectionNeeds.reduce(
-            (sum, n) => sum + n.quantity_received,
-            0,
-          );
-          const required = sectionNeeds.reduce(
-            (sum, n) => sum + n.quantity_required,
-            0,
-          );
-          const percentage =
-            required > 0 ? Math.round((received / required) * 100) : 0;
+        const sectionMetrics: SectionMetric[] = (myOrg.sections || []).map(
+          (section): SectionMetric => {
+            const sectionNeeds = myNeeds.filter(
+              (n) => n.section === section.id,
+            );
+            const received = sectionNeeds.reduce(
+              (sum, n) => sum + n.quantity_received,
+              0,
+            );
+            const required = sectionNeeds.reduce(
+              (sum, n) => sum + n.quantity_required,
+              0,
+            );
+            const percentage =
+              required > 0 ? Math.round((received / required) * 100) : 0;
 
-          return {
-            label: section.name,
-            value: received,
-            total: required,
-            percentage,
-            status:
-              percentage > 80
-                ? "success"
-                : percentage < 30
-                  ? "critical"
-                  : "warning",
-          };
-        });
+            return {
+              label: section.name,
+              value: received,
+              total: required,
+              percentage,
+              status:
+                percentage > 80
+                  ? "success"
+                  : percentage < 30
+                    ? ("critical" as const)
+                    : ("warning" as const),
+            };
+          },
+        );
 
         const last6Months = [];
         for (let i = 5; i >= 0; i--) {
