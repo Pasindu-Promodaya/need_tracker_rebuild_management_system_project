@@ -17,7 +17,14 @@ export default function Home() {
       const orgs = await getOrganizations();
       setOrganizations(orgs);
     } catch (err) {
-      console.error(err instanceof Error ? err.message : "Failed to load data");
+      console.warn(
+        "Backend API not available. Start with: python manage.py runserver",
+        err instanceof Error ? err.message : "Failed to load data"
+      );
+      // Continue without backend data - allow UI testing
+      setOrganizations([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -25,7 +32,6 @@ export default function Home() {
     async function loadData() {
       setLoading(true);
       await fetchData();
-      setLoading(false);
     }
     loadData();
   }, []);
