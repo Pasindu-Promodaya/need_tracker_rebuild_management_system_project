@@ -216,8 +216,8 @@ jobs:
           context: ./backend
           push: true
           tags: |
-           ravindudilhan/rebuild-backend:latest
-           ravindudilhan/rebuild-backend:${{ github.sha }} \ -n rikili001
+            ravindudilhan/rebuild-backend:latest
+            ravindudilhan/rebuild-backend:${{ github.sha }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
@@ -226,7 +226,7 @@ jobs:
           push: true
           tags: |
             ravindudilhan/rebuild-frontend:latest
-            ravindudilhan/rebuild-frontend:${{ github.sha }} \ -n rikili001
+            ravindudilhan/rebuild-frontend:${{ github.sha }}
   
   deploy-k3s:
     needs: [push-images]
@@ -275,3 +275,13 @@ jobs:
 
       - name: Apply ingress manifest
         run: kubectl apply -f k8s/ingress.yaml
+
+      - name: Force pull latest backend image
+        run: |
+          kubectl rollout restart deployment/backend -n rikili001
+          kubectl rollout status deployment/backend -n rikili001 --timeout=5m
+
+      - name: Force pull latest frontend image
+        run: |
+          kubectl rollout restart deployment/frontend -n rikili001
+          kubectl rollout status deployment/frontend -n rikili001 --timeout=5m
