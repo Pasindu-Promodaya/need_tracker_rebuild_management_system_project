@@ -148,7 +148,7 @@ export default function Home() {
 
             {/* Right Column: Featured Image Card */}
             <div className="relative animate-fade-in group lg:ml-auto">
-              <div className="absolute -inset-4 bg-white/10 rounded-[32px] blur-2xl group-hover:bg-white/20 transition-all duration-500"></div>
+              <div className="absolute -inset-4 bg-white/10 rounded-4xl blur-2xl group-hover:bg-white/20 transition-all duration-500"></div>
               <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white/20 aspect-video bg-slate-800 flex items-center justify-center">
                 <img
                   src="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=800&q=80"
@@ -301,7 +301,7 @@ export default function Home() {
             ].map((step, i) => (
               <div
                 key={i}
-                className="bg-white p-8 rounded-[24px] shadow-sm hover:shadow-xl transition-all duration-500 border border-slate-100 group"
+                className="bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-500 border border-slate-100 group"
               >
                 <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform">
                   {step.icon}

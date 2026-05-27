@@ -217,7 +217,7 @@ jobs:
           push: true
           tags: |
            ravindudilhan/rebuild-backend:latest
-           ravindudilhan/rebuild-backend:${{ github.sha }}
+           ravindudilhan/rebuild-backend:${{ github.sha }} \ -n rikili001
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
@@ -226,7 +226,7 @@ jobs:
           push: true
           tags: |
             ravindudilhan/rebuild-frontend:latest
-            ravindudilhan/rebuild-frontend:${{ github.sha }}
+            ravindudilhan/rebuild-frontend:${{ github.sha }} \ -n rikili001
   
   deploy-k3s:
     needs: [push-images]
