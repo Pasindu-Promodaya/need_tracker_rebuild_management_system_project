@@ -142,9 +142,9 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 sm:h-20">
           {/* Logo - Responsive sizing */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="shrink-0 flex items-center">
             <Link href="/" className="flex items-center gap-2 sm:gap-3">
-              <div className="w-9 sm:w-10 h-9 sm:h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+              <div className="w-9 sm:w-10 h-9 sm:h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
                 <svg
                   className="w-5 sm:w-6 h-5 sm:h-6 text-white"
                   fill="none"
@@ -275,7 +275,7 @@ export default function Navbar() {
 
                 {showProfile && (
                   <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-scale-up">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-4">
+                    <div className="bg-linear-to-r from-blue-600 to-indigo-700 px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-lg">
                           {user.username.charAt(0).toUpperCase()}
