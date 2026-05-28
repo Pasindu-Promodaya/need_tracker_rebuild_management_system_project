@@ -215,19 +215,15 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: |
-            ravindudilhan/rebuild-backend:latest
-            ravindudilhan/rebuild-backend:${{ github.sha }}
+          tags: ravindudilhan/rebuild-backend:latest
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
-          tags: |
-            ravindudilhan/rebuild-frontend:latest
-            ravindudilhan/rebuild-frontend:${{ github.sha }}
-  
+          tags: ravindudilhan/rebuild-frontend:latest
+
   deploy-k3s:
     needs: [push-images]
     runs-on: ubuntu-latest
@@ -257,10 +253,15 @@ jobs:
         env:
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
         run: |
           kubectl create secret generic backend-secrets \
             --from-literal=SECRET_KEY="$DJANGO_SECRET_KEY" \
             --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+            --from-literal=EMAIL_HOST_USER="$EMAIL_HOST_USER" \
+            --from-literal=EMAIL_HOST_PASSWORD="$EMAIL_HOST_PASSWORD" \
+            --from-literal=DEFAULT_FROM_EMAIL="$EMAIL_HOST_USER" \
             -n rikili001 \
             --dry-run=client -o yaml | kubectl apply -f -
 
@@ -275,13 +276,3 @@ jobs:
 
       - name: Apply ingress manifest
         run: kubectl apply -f k8s/ingress.yaml
-
-      - name: Force pull latest backend image
-        run: |
-          kubectl rollout restart deployment/backend -n rikili001
-          kubectl rollout status deployment/backend -n rikili001 --timeout=5m
-
-      - name: Force pull latest frontend image
-        run: |
-          kubectl rollout restart deployment/frontend -n rikili001
-          kubectl rollout status deployment/frontend -n rikili001 --timeout=5m
