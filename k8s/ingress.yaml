@@ -7,7 +7,7 @@ metadata:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
   rules:
-  - host: 62.171.171.71.nip.io
+  - host: 62.171.171.71.sslip.io
     http:
       paths:
       - path: /api
