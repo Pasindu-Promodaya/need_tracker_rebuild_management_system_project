@@ -273,7 +273,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'registration_number', 'address', 'district', 
             'org_type', 'description', 'phone', 'email_contact', 'website', 
-            'established_year', 'admins', 'sections',
+            'established_year', 'admins', 'sections', 'latitude', 'longitude',
         ]
         
     def get_admins(self, obj):
@@ -362,7 +362,7 @@ class DonationSerializer(serializers.ModelSerializer):
             'donor_email', 'donor_phone', 'government_department', 'government_program',
             'government_officer_name', 'government_officer_designation',
             'government_officer_contact', 'government_email', 'donation_letter_file',
-            'confirmed_by_name', 'cancelled_by_name'
+            'confirmed_by_name', 'cancelled_by_name', 'cancellation_reason'
         ]
 
     def get_confirmed_by_name(self, obj):

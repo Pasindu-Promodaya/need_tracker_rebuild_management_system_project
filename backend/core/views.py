@@ -846,8 +846,9 @@ class AdminApprovalViewSet(viewsets.ViewSet):
 
 # 5. Donation ViewSet
 class DonationViewSet(viewsets.ModelViewSet):
-    queryset = Donation.objects.select_related('donor', 'need_item').all()
+    queryset = Donation.objects.select_related('donor', 'need_item').all().order_by('-created_at')
     serializer_class = DonationSerializer
+    pagination_class = None
     
     def get_queryset(self):
         """Filter donations based on user role and organization ownership"""
@@ -998,8 +999,10 @@ class DonationViewSet(viewsets.ModelViewSet):
         """Cancel a pending donation"""
         donation = self.get_object()
         if donation.status == 'PENDING':
+            reason = request.data.get('reason', '')
             donation.status = 'CANCELLED'
             donation.cancelled_by = request.user
+            donation.cancellation_reason = reason
             donation.save()
             
             # Send cancellation email to donor
@@ -1007,4 +1010,76 @@ class DonationViewSet(viewsets.ModelViewSet):
             
             return Response({'status': 'Donation cancelled'}, status=status.HTTP_200_OK)
         return Response({'status': 'Only pending donations can be cancelled'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def system_stats(request):
+    """
+    Get system-wide statistics for the landing page.
+    """
+    # 1. Count unique provinces covered
+    district_to_province = {
+        # Western
+        'colombo': 'Western', 'gampaha': 'Western', 'kalutara': 'Western',
+        # Central
+        'kandy': 'Central', 'matale': 'Central', 'nuwara eliya': 'Central',
+        # Southern
+        'galle': 'Southern', 'matara': 'Southern', 'hambantota': 'Southern',
+        # Northern
+        'jaffna': 'Northern', 'kilinochchi': 'Northern', 'mannar': 'Northern',
+        'mullaitivu': 'Northern', 'vavuniya': 'Northern',
+        # Eastern
+        'trincomalee': 'Eastern', 'batticaloa': 'Eastern', 'ampara': 'Eastern',
+        # North Western
+        'kurunegala': 'North Western', 'puttalam': 'North Western',
+        # North Central
+        'anuradhapura': 'North Central', 'polonnaruwa': 'North Central',
+        # Uva
+        'badulla': 'Uva', 'moneragala': 'Uva',
+        # Sabaragamuwa
+        'ratnapura': 'Sabaragamuwa', 'kegalle': 'Sabaragamuwa'
+    }
+    
+    provinces = {
+        'western', 'central', 'southern', 'northern', 'eastern', 
+        'north western', 'north central', 'uva', 'sabaragamuwa'
+    }
+
+    districts = Organization.objects.values_list('district', flat=True).distinct()
+    unique_provinces = set()
+    for d in districts:
+        if d:
+            d_norm = d.strip().lower()
+            if d_norm in district_to_province:
+                unique_provinces.add(district_to_province[d_norm])
+            elif d_norm in provinces:
+                unique_provinces.add(d.strip().title())
+            else:
+                unique_provinces.add(d.strip().title())
+                
+    provinces_count = len(unique_provinces)
+    
+    # 2. Count verified hospitals (organizations)
+    verified_hospitals = Organization.objects.count()
+    
+    # 3. Count donors onboarded
+    donors_count = User.objects.filter(role='DONOR').count()
+    
+    # 4. Calculate delivery success rate
+    fulfilled = Donation.objects.filter(status='FULFILLED').count()
+    cancelled = Donation.objects.filter(status='CANCELLED').count()
+    
+    total_completed = fulfilled + cancelled
+    if total_completed > 0:
+        delivery_success_rate = round((fulfilled / total_completed) * 100)
+    else:
+        delivery_success_rate = 98  # Default/fallback from design
+        
+    return Response({
+        'provinces_covered': provinces_count,
+        'verified_hospitals': verified_hospitals,
+        'donors_onboarded': donors_count,
+        'delivery_success_rate': delivery_success_rate
+    })
 

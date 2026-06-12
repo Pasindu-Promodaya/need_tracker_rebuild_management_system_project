@@ -38,6 +38,8 @@ export default function DonationsPage() {
     donationDetails: null,
   });
   const [viewDialog, setViewDialog] = useState<Donation | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isReasonStep, setIsReasonStep] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -107,6 +109,7 @@ export default function DonationsPage() {
 
   const handleConfirm = async (donationId: number) => {
     const donation = donations.find((d) => d.id === donationId);
+    setIsReasonStep(false);
     setConfirmDialog({
       isOpen: true,
       type: "confirm",
@@ -139,6 +142,8 @@ export default function DonationsPage() {
 
   const handleCancel = async (donationId: number) => {
     const donation = donations.find((d) => d.id === donationId);
+    setCancelReason("");
+    setIsReasonStep(false);
     setConfirmDialog({
       isOpen: true,
       type: "cancel",
@@ -152,13 +157,15 @@ export default function DonationsPage() {
 
     setCancelling(confirmDialog.donationId);
     try {
-      await cancelDonation(confirmDialog.donationId);
+      await cancelDonation(confirmDialog.donationId, cancelReason);
       setConfirmDialog({
         isOpen: false,
         type: null,
         donationId: null,
         donationDetails: null,
       });
+      setCancelReason("");
+      setIsReasonStep(false);
       await fetchDonations();
     } catch (err: unknown) {
       setError(
@@ -453,6 +460,15 @@ export default function DonationsPage() {
                 </span>
               </div>
             )}
+
+            {donation.status === "CANCELLED" && (
+              <div className="grid grid-cols-3 border-b border-gray-100 pb-2">
+                <span className="text-gray-500 font-medium">Reason</span>
+                <span className="col-span-2 text-gray-900">
+                  {donation.cancellation_reason || "No reason provided"}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="p-6 border-t shrink-0 flex justify-end">
@@ -474,6 +490,55 @@ export default function DonationsPage() {
 
     const donation = confirmDialog.donationDetails;
     const isConfirm = confirmDialog.type === "confirm";
+
+    if (isReasonStep && !isConfirm) {
+      return (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <XCircle className="text-red-600" size={24} />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+              Reason for Cancellation
+            </h3>
+
+            <p className="text-gray-600 text-center mb-4 text-sm">
+              Please specify the reason for cancelling this donation.
+            </p>
+
+            <div className="mb-6">
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g., The hospital has already received enough supply of this item."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm min-h-[100px] text-gray-900"
+                required
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsReasonStep(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition"
+                disabled={cancelling !== null}
+              >
+                Back
+              </button>
+              <button
+                onClick={handleCancelApprove}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg font-medium transition"
+                disabled={cancelling !== null || !cancelReason.trim()}
+              >
+                {cancelling !== null ? "Cancelling..." : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
@@ -542,7 +607,7 @@ export default function DonationsPage() {
               Back
             </button>
             <button
-              onClick={isConfirm ? handleConfirmApprove : handleCancelApprove}
+              onClick={isConfirm ? handleConfirmApprove : () => setIsReasonStep(true)}
               className={`flex-1 px-4 py-2 text-white rounded-lg font-medium transition ${
                 isConfirm
                   ? "bg-green-600 hover:bg-green-700 disabled:bg-green-400"

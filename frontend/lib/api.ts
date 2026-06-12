@@ -134,6 +134,8 @@ export interface Organization {
   email_contact?: string;
   website?: string;
   established_year?: number;
+  latitude?: number;
+  longitude?: number;
   sections: Section[];
 }
 
@@ -172,6 +174,7 @@ export interface Donation {
   donation_letter_file: string | null;
   confirmed_by_name?: string;
   cancelled_by_name?: string;
+  cancellation_reason?: string;
   need_item_detail?: {
     id: number;
     name: string;
@@ -565,8 +568,11 @@ export const updateDonation = (id: number, data: Partial<Donation>) =>
 export const confirmDonation = (id: number) =>
   fetchAPI<void>(`/donations/${id}/confirm/`, { method: "POST" });
 
-export const cancelDonation = (id: number) =>
-  fetchAPI<void>(`/donations/${id}/cancel/`, { method: "POST" });
+export const cancelDonation = (id: number, reason?: string) =>
+  fetchAPI<void>(`/donations/${id}/cancel/`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
 
 export const deleteDonation = (id: number) =>
   fetchAPI<void>(`/donations/${id}/`, { method: "DELETE" });
@@ -647,3 +653,16 @@ export const getDonors = async () => {
   );
   return unwrapListResponse(response);
 };
+
+// System Stats
+export interface SystemStats {
+  provinces_covered: number;
+  verified_hospitals: number;
+  donors_onboarded: number;
+  delivery_success_rate: number;
+}
+
+export const getSystemStats = async (): Promise<SystemStats> => {
+  return fetchAPI<SystemStats>("/stats/");
+};
+
