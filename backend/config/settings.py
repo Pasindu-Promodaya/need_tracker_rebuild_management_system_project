@@ -30,7 +30,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)  # False by default - prevents
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,62.171.171.71,rebuild-app.duckdns.org',
+    default='localhost,127.0.0.1,62.171.171.71,rebuild-app.duckdns.org,backend,backend.rikili001,backend.rikili001.svc.cluster.local',
     cast=Csv()
 )
 
