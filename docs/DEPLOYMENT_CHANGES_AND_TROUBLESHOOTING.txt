@@ -170,49 +170,52 @@ made to the deployment pipeline, Kubernetes manifests, and Django backend config
        CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://rebuild-app.duckdns.org']
 
 --------------------------------------------------------------------------------
-7. KUBERNETES SERVICEMONITOR FOR METRICS DISCOVERY
+7. PROMETHEUS SCRAPE CONFIGURATION VIA CONFIGMAP
 --------------------------------------------------------------------------------
-* Location: k8s/django-servicemonitor.yaml & k8s/backend.yaml
+* Location: k8s/prometheus-scrape-config.yaml & .github/workflows/ci-cd.yml
 
-* Description:
-  Added a Kubernetes 'ServiceMonitor' resource to allow the Prometheus Operator
-  (running in the 'monitoring' namespace) to automatically auto-discover and
-  scrape the Django backend metrics from the 'rikili001' namespace.
+* Issue:
+  The previous 'ServiceMonitor' setup failed to deploy with the error:
+  "no matches for kind 'ServiceMonitor' in version 'monitoring.coreos.com/v1'"
+  This occurred because the Prometheus Operator Custom Resource Definitions (CRDs)
+  were not installed on the K3s cluster.
 
-* Fixes & Updates:
-  1. ServiceMonitor API Version:
-     - Corrected apiVersion from 'v1' to 'monitoring.coreos.com/v1' to match 
-       the Prometheus Operator CRD requirement.
-  2. Named Service Ports Alignment:
-     - Prometheus Operator ServiceMonitors match target ports by name, not
-       by numeric values. 
-     - Named the backend Service port 'http' in 'k8s/backend.yaml'.
-     - Set the ServiceMonitor endpoint target port to 'http'.
+* Fix:
+  1. Removed the 'ServiceMonitor' resource to avoid CRD dependency.
+  2. Created a standard Kubernetes 'ConfigMap' named 'prometheus-scrape-config.yaml' 
+     declaring the Prometheus server configuration and scrape jobs.
+  3. Added the Django backend scrape target pointing to the cluster DNS of the 
+     backend service: 'backend.rikili001.svc.cluster.local:8000'.
+  4. Updated the pipeline to deploy the scrape config ConfigMap instead of the 
+     ServiceMonitor.
 
-* Code Changes in k8s/django-servicemonitor.yaml:
-  apiVersion: monitoring.coreos.com/v1
-  kind: ServiceMonitor
+* Code Changes in k8s/prometheus-scrape-config.yaml:
+  apiVersion: v1
+  kind: ConfigMap
   metadata:
-    name: django-metrics
+    name: prometheus-server
     namespace: monitoring
-  spec:
-    selector:
-      matchLabels:
-        app: backend
-    namespaceSelector:
-      matchNames:
-        - rikili001
-    endpoints:
-    - port: http
-      path: /metrics
-      interval: 30s
-
-* Code Changes in k8s/backend.yaml:
-  Updated Service ports list to assign the name 'http':
-  ports: [{ name: http, port: 8000 }]
+    labels:
+      app: prometheus
+  data:
+    prometheus.yml: |
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 15s
+      scrape_configs:
+        - job_name: prometheus
+          static_configs:
+            - targets: ['localhost:9090']
+        - job_name: node-exporter
+          static_configs:
+            - targets: ['prometheus-prometheus-node-exporter.monitoring.svc.cluster.local:9100']
+        - job_name: django-backend
+          static_configs:
+            - targets: ['backend.rikili001.svc.cluster.local:8000']
+          metrics_path: /metrics
+          scrape_interval: 30s
 
 * Pipeline Updates (.github/workflows/ci-cd.yml):
-  Added a step to apply the ServiceMonitor manifest during deployment:
-  - name: Apply ServiceMonitor manifest
-    run: kubectl apply -f k8s/django-servicemonitor.yaml
+  - name: Apply Prometheus scrape config manifest
+    run: kubectl apply -f k8s/prometheus-scrape-config.yaml
 ================================================================================
