@@ -276,7 +276,9 @@ class Donation(models.Model):
     # Admins who took actions
     confirmed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="confirmed_donations")
     cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="cancelled_donations")
+    received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_donations")
     cancellation_reason = models.TextField(blank=True, default='')
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Donation {self.id} - {self.quantity} units of {self.need_item.name}"
