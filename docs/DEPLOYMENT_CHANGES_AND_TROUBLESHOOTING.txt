@@ -164,7 +164,7 @@ made to the deployment pipeline, Kubernetes manifests, and Django backend config
 
   3. backend/config/settings.py:
      - Updated allowed hosts, frontend redirection target, CORS origins, and CSRF:
-       ALLOWED_HOSTS = ['localhost', '127.0.0.1', '62.171.171.71', 'rebuild-app.duckdns.org']
+       ALLOWED_HOSTS = ['localhost', '127.0.0.1', '62.171.171.71', 'rebuild-app.duckdns.org', 'backend', 'backend.rikili001', 'backend.rikili001.svc.cluster.local']
        FRONTEND_URL = 'https://rebuild-app.duckdns.org'
        CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://rebuild-app.duckdns.org']
        CSRF_TRUSTED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://rebuild-app.duckdns.org']
