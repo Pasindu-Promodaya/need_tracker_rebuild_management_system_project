@@ -300,7 +300,7 @@ export default function EditOrganizationPage() {
                 <p className="font-semibold mt-2">To find them using Google Maps:</p>
                 <ol className="list-decimal pl-4 space-y-1">
                   <li>Go to <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Maps</a>.</li>
-                  <li>Find your organization's exact location on the map.</li>
+                  <li>Find your organization&apos;s exact location on the map.</li>
                   <li><strong>Right-click</strong> (on computer) or <strong>press and hold</strong> (on mobile) on the exact spot.</li>
                   <li>A small pop-up menu will display decimal numbers at the top (e.g. <code>7.0919, 80.0064</code>).</li>
                   <li>Click/tap on those numbers to copy them. Paste the first number into Latitude and the second into Longitude.</li>
