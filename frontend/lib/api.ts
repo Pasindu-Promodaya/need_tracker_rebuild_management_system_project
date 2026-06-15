@@ -134,8 +134,8 @@ export interface Organization {
   email_contact?: string;
   website?: string;
   established_year?: number;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   sections: Section[];
 }
 
