@@ -134,8 +134,8 @@ export interface Organization {
   email_contact?: string;
   website?: string;
   established_year?: number;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   sections: Section[];
 }
 
@@ -175,6 +175,8 @@ export interface Donation {
   confirmed_by_name?: string;
   cancelled_by_name?: string;
   cancellation_reason?: string;
+  cancelled_at?: string;
+  received_by_name?: string;
   need_item_detail?: {
     id: number;
     name: string;
@@ -565,13 +567,21 @@ export const updateDonation = (id: number, data: Partial<Donation>) =>
     body: JSON.stringify(data),
   });
 
-export const confirmDonation = (id: number) =>
-  fetchAPI<void>(`/donations/${id}/confirm/`, { method: "POST" });
+export const confirmDonation = (id: number, confirmedQuantity?: number) =>
+  fetchAPI<void>(`/donations/${id}/confirm/`, {
+    method: "POST",
+    body: confirmedQuantity !== undefined ? JSON.stringify({ confirmed_quantity: confirmedQuantity }) : undefined,
+  });
 
 export const cancelDonation = (id: number, reason?: string) =>
   fetchAPI<void>(`/donations/${id}/cancel/`, {
     method: "POST",
     body: JSON.stringify({ reason }),
+  });
+
+export const receiveDonation = (id: number) =>
+  fetchAPI<void>(`/donations/${id}/receive/`, {
+    method: "POST",
   });
 
 export const deleteDonation = (id: number) =>

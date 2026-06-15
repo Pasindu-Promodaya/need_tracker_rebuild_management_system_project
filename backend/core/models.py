@@ -125,7 +125,25 @@ class Organization(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Automatically geocode if coordinates are not provided
+        # Automatically geocode if coordinates are not provided, or if address/name/district changed
+        # and the user did not manually update the coordinates.
+        if self.pk:
+            try:
+                orig = Organization.objects.get(pk=self.pk)
+                info_changed = (self.name != orig.name or 
+                                self.address != orig.address or 
+                                self.district != orig.district)
+                coords_changed = (self.latitude != orig.latitude or 
+                                  self.longitude != orig.longitude)
+                
+                # If name/address/district changed, and user did NOT manually change coordinates,
+                # we clear coordinates to force a fresh geocode.
+                if info_changed and not coords_changed:
+                    self.latitude = None
+                    self.longitude = None
+            except Organization.DoesNotExist:
+                pass
+
         if self.latitude is None or self.longitude is None:
             try:
                 import urllib.request
@@ -276,7 +294,9 @@ class Donation(models.Model):
     # Admins who took actions
     confirmed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="confirmed_donations")
     cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="cancelled_donations")
+    received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="received_donations")
     cancellation_reason = models.TextField(blank=True, default='')
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Donation {self.id} - {self.quantity} units of {self.need_item.name}"
