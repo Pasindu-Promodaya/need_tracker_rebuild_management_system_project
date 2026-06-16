@@ -11,6 +11,7 @@ type LeafletMap = {
   ) => void;
   off: () => void;
   remove: () => void;
+  stop?: () => void;
 };
 
 let L: typeof import("leaflet") | null = null;
@@ -191,7 +192,11 @@ export default function AdvancedSriLankaMap({
           );
           const leafletMap = map.current;
           if (leafletMap) {
-            leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 9, animate: false });
+            leafletMap.fitBounds(bounds, {
+              padding: [30, 30],
+              maxZoom: 9,
+              animate: false,
+            });
           }
         }
 
@@ -213,8 +218,15 @@ export default function AdvancedSriLankaMap({
     return () => {
       isCancelled = true;
       if (map.current) {
-        map.current.off();
-        map.current.remove();
+        try {
+          if (typeof map.current.stop === "function") {
+            map.current.stop();
+          }
+          map.current.off();
+          map.current.remove();
+        } catch (err) {
+          console.error("Error during map cleanup:", err);
+        }
         map.current = null;
       }
     };
