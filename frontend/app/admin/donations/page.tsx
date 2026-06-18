@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import {
   Donation,
   NeedItem,
+  Section,
   getDonations,
   getOrganizations,
   confirmDonation,
@@ -33,6 +34,8 @@ export default function DonationsPage() {
   const [cancelling, setCancelling] = useState<number | null>(null);
   const [receiving, setReceiving] = useState<number | null>(null);
   const [needsMap, setNeedsMap] = useState<Map<number, NeedItem>>(new Map());
+  const [sections, setSections] = useState<Section[]>([]);
+  const [sectionFilter, setSectionFilter] = useState<number | "ALL">("ALL");
   const [confirmDialog, setConfirmDialog] = useState<DonationDialogState>({
     isOpen: false,
     type: null,
@@ -64,6 +67,7 @@ export default function DonationsPage() {
       // ORG_ADMIN logic
       const orgs = await getOrganizations();
       if (orgs.length > 0) {
+        setSections(orgs[0].sections || []);
         const nMap = new Map<number, NeedItem>();
         orgs[0].sections?.forEach((section) => {
           section.needs?.forEach((need) => {
@@ -264,12 +268,25 @@ export default function DonationsPage() {
     );
   };
 
+  const getReceivedQuantity = (needId: number): number => {
+    return donations
+      .filter((d) => d.need_item === needId && d.status === "FULFILLED")
+      .reduce((sum, d) => sum + d.quantity, 0);
+  };
+
   const filteredDonations = (() => {
     let result: Donation[] = [];
     if (filter === "ALL") result = donations;
     else if (filter === "CONFIRMED")
       result = donations.filter((d) => d.status === "CONFIRMED");
     else result = donations.filter((d) => d.status === filter);
+
+    if (sectionFilter !== "ALL") {
+      result = result.filter((d) => {
+        const need = needsMap.get(d.need_item);
+        return need?.section === sectionFilter;
+      });
+    }
 
     if (filter === "CANCELLED") {
       return result.sort((a, b) => {
@@ -289,9 +306,7 @@ export default function DonationsPage() {
   // For FULFILLED filter, group by need item
   const groupedFulfilledDonations: Record<number, Donation[]> =
     filter === "FULFILLED"
-      ? groupDonationsByNeedItem(
-          donations.filter((d) => d.status === "FULFILLED"),
-        )
+      ? groupDonationsByNeedItem(filteredDonations)
       : {};
 
   if (authLoading || isLoading) {
@@ -784,47 +799,68 @@ export default function DonationsPage() {
           </div>
         )}
 
-        <div className="mb-6 flex gap-2 border-b border-gray-200">
-          {["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED", "ALL"].map(
-            (status) => {
-              let count = 0;
-              if (status === "ALL") {
-                count = donations.length;
-              } else if (status === "CONFIRMED") {
-                count = donations.filter(
-                  (d) => d.status === "CONFIRMED",
-                ).length;
-              } else if (status === "FULFILLED") {
-                // Count unique need items for FULFILLED tab
-                const fulfilledDonations = donations.filter(
-                  (d) => d.status === "FULFILLED",
-                );
-                const uniqueNeeds = new Set(
-                  fulfilledDonations.map((d) => d.need_item),
-                );
-                count = uniqueNeeds.size;
-              } else {
-                count = donations.filter((d) => d.status === status).length;
-              }
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 gap-4">
+          <div className="flex gap-2">
+            {["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED", "ALL"].map(
+              (status) => {
+                let count = 0;
+                if (status === "ALL") {
+                  count = donations.length;
+                } else if (status === "CONFIRMED") {
+                  count = donations.filter(
+                    (d) => d.status === "CONFIRMED",
+                  ).length;
+                } else if (status === "FULFILLED") {
+                  // Count unique need items for FULFILLED tab
+                  const fulfilledDonations = donations.filter(
+                    (d) => d.status === "FULFILLED",
+                  );
+                  const uniqueNeeds = new Set(
+                    fulfilledDonations.map((d) => d.need_item),
+                  );
+                  count = uniqueNeeds.size;
+                } else {
+                  count = donations.filter((d) => d.status === status).length;
+                }
 
-              return (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`px-4 py-3 font-medium border-b-2 transition ${
-                    filter === status
-                      ? "text-blue-600 border-blue-600"
-                      : "text-gray-600 border-transparent hover:text-gray-900"
-                  }`}
-                >
-                  {status}
-                  {status !== "ALL" && (
-                    <span className="ml-2 text-sm">({count})</span>
-                  )}
-                </button>
-              );
-            },
-          )}
+                return (
+                  <button
+                    key={status}
+                    onClick={() => setFilter(status)}
+                    className={`px-4 py-3 font-medium border-b-2 transition ${
+                      filter === status
+                        ? "text-blue-600 border-blue-600"
+                        : "text-gray-600 border-transparent hover:text-gray-900"
+                    }`}
+                  >
+                    {status}
+                    {status !== "ALL" && (
+                      <span className="ml-2 text-sm">({count})</span>
+                    )}
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 pb-2 sm:pb-0">
+            <label htmlFor="section-filter" className="text-sm text-gray-600 font-medium">
+              Filter by Section:
+            </label>
+            <select
+              id="section-filter"
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 font-medium transition"
+            >
+              <option value="ALL">All Sections</option>
+              {sections.map((sec) => (
+                <option key={sec.id} value={sec.id}>
+                  {sec.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -851,6 +887,12 @@ export default function DonationsPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                       Received Quantity
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                      Confirmed Quantity
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                      Needed Quantity
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                       Requested Quantity
@@ -915,10 +957,22 @@ export default function DonationsPage() {
                                   ? `${needsMap.get(firstDonation.need_item)?.quantity_required} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
                                   : "-"}
                               </td>
+                              <td className="px-6 py-4 text-sm text-purple-700 font-medium">
+                                {`${totalQuantity} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`}
+                              </td>
                               <td className="px-6 py-4 text-sm text-green-700 font-medium">
                                 {needsMap.get(firstDonation.need_item)
                                   ?.quantity_received !== undefined
                                   ? `${needsMap.get(firstDonation.need_item)?.quantity_received} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
+                                  : "-"}
+                              </td>
+                              <td className={`px-6 py-4 text-sm font-medium ${
+                                Math.max(0, (needsMap.get(firstDonation.need_item)?.quantity_required || 0) - (needsMap.get(firstDonation.need_item)?.quantity_received || 0)) > 0
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}>
+                                {needsMap.get(firstDonation.need_item)
+                                  ? `${Math.max(0, (needsMap.get(firstDonation.need_item)?.quantity_required || 0) - (needsMap.get(firstDonation.need_item)?.quantity_received || 0))} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
                                   : "-"}
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-600">
@@ -1046,10 +1100,24 @@ export default function DonationsPage() {
                                 ? `${needsMap.get(donation.need_item)?.quantity_required} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
                                 : "-"}
                             </td>
+                            <td className="px-6 py-4 text-sm text-purple-700 font-medium">
+                              {needsMap.get(donation.need_item)
+                                ? `${getReceivedQuantity(donation.need_item)} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
+                                : "-"}
+                            </td>
                             <td className="px-6 py-4 text-sm text-green-700 font-medium">
                               {needsMap.get(donation.need_item)
                                 ?.quantity_received !== undefined
                                 ? `${needsMap.get(donation.need_item)?.quantity_received} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
+                                : "-"}
+                            </td>
+                            <td className={`px-6 py-4 text-sm font-medium ${
+                              Math.max(0, (needsMap.get(donation.need_item)?.quantity_required || 0) - (needsMap.get(donation.need_item)?.quantity_received || 0)) > 0
+                                ? "text-red-600"
+                                : "text-green-600"
+                            }`}>
+                              {needsMap.get(donation.need_item)
+                                ? `${Math.max(0, (needsMap.get(donation.need_item)?.quantity_required || 0) - (needsMap.get(donation.need_item)?.quantity_received || 0))} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
                                 : "-"}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">

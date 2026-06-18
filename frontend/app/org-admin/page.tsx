@@ -14,6 +14,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import StatsCard from "@/components/StatsCard";
 import AnalyticsView from "@/components/AnalyticsView";
 import GraphsView from "@/components/GraphsView";
+import OrgLobbyMap from "@/components/OrgLobbyMap";
 import {
   Building2,
   Layers,
@@ -78,6 +79,7 @@ export default function OrgAdminDashboard() {
     yearlyData: [] as ChartDataPoint[],
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
+  const [orgNeeds, setOrgNeeds] = useState<NeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -281,6 +283,7 @@ export default function OrgAdminDashboard() {
         });
 
         setCriticalNeeds(unfulfilledCritical.slice(0, 3));
+        setOrgNeeds(myNeeds);
       } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : "Failed to fetch dashboard data",
@@ -389,6 +392,9 @@ export default function OrgAdminDashboard() {
             color="blue"
           />
         </div>
+
+        {/* Lobby Map */}
+        <OrgLobbyMap organization={organization} needs={orgNeeds} />
 
         {/* Analytics & Graphs */}
         <div id="analytics-section" className="mb-12">

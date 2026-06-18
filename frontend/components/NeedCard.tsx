@@ -131,8 +131,7 @@ export default function NeedCard({
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className={`need-card__progress-fill ${
-                progress >= 100
+              className={`need-card__progress-fill ${progress >= 100
                   ? "need-card__progress-fill--complete"
                   : progress >= 75
                     ? "need-card__progress-fill--75to100"
@@ -141,7 +140,7 @@ export default function NeedCard({
                       : progress >= 25
                         ? "need-card__progress-fill--25to50"
                         : "need-card__progress-fill--0to25"
-              }`}
+                }`}
               data-progress={Math.round(progress)}
             />
           </div>
@@ -150,7 +149,7 @@ export default function NeedCard({
         {/* Quantities */}
         <div className="flex justify-between text-sm mb-4">
           <div>
-            <span className="text-gray-500">Received: </span>
+            <span className="text-gray-500">Confirmed: </span>
             <span className="font-medium text-green-600">
               {need.quantity_received} {unitLabels[need.unit]}
             </span>
