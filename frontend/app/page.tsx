@@ -35,8 +35,8 @@ export default function Home() {
         const sortedNeeds = needs.sort(
           (a, b) =>
             b.quantity_required -
-            b.quantity_received -
-            (a.quantity_required - a.quantity_received),
+            b.quantity_confirmed -
+            (a.quantity_required - a.quantity_confirmed),
         );
         setUrgentNeed(sortedNeeds[0]);
       }
@@ -208,14 +208,14 @@ export default function Home() {
                       <div
                         className="h-full bg-green-500 rounded-full transition-all duration-1000"
                         style={{
-                          width: `${Math.min(100, Math.round((urgentNeed.quantity_received / urgentNeed.quantity_required) * 100))}%`,
+                          width: `${Math.min(100, Math.round((urgentNeed.quantity_confirmed / urgentNeed.quantity_required) * 100))}%`,
                         }}
                       ></div>
                     </div>
                     <div className="flex justify-between text-xs text-slate-400 font-medium">
-                      <span>{urgentNeed.quantity_received} of {urgentNeed.quantity_required} units delivered</span>
+                      <span>{urgentNeed.quantity_confirmed} of {urgentNeed.quantity_required} units pledged</span>
                       <span className="text-green-400 font-bold">
-                        {Math.min(100, Math.round((urgentNeed.quantity_received / urgentNeed.quantity_required) * 100))}%
+                        {Math.min(100, Math.round((urgentNeed.quantity_confirmed / urgentNeed.quantity_required) * 100))}%
                       </span>
                     </div>
                   </div>

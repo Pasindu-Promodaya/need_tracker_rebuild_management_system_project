@@ -37,10 +37,10 @@ export default function NeedCard({
 
   const progress =
     need.quantity_required > 0
-      ? Math.min((need.quantity_received / need.quantity_required) * 100, 100)
+      ? Math.min((need.quantity_confirmed / need.quantity_required) * 100, 100)
       : 0;
 
-  const remaining = need.quantity_required - need.quantity_received;
+  const remaining = need.quantity_required - need.quantity_confirmed;
 
   const handleDonationSuccess = () => {
     setIsDonateModalOpen(false);
@@ -151,7 +151,10 @@ export default function NeedCard({
           <div>
             <span className="text-gray-500">Confirmed: </span>
             <span className="font-medium text-green-600">
-              {need.quantity_received} {unitLabels[need.unit]}
+              {need.quantity_confirmed} {unitLabels[need.unit]}
+            </span>
+            <span className="text-xs text-gray-400 ml-1">
+              ({need.quantity_received} received)
             </span>
           </div>
           <div>

@@ -42,6 +42,7 @@ interface ChartDataPoint {
   name: string;
   donations: number;
   confirmed: number;
+  fulfilled: number;
 }
 
 const controlTileStyles = {
@@ -69,6 +70,7 @@ export default function OrgAdminDashboard() {
     totalNeeds: 0,
     criticalNeeds: 0,
     donations: 0,
+    successfulDonationsThisMonth: 0,
   });
   const [analytics, setAnalytics] = useState({
     fulfillmentRate: 0,
@@ -80,6 +82,7 @@ export default function OrgAdminDashboard() {
   });
   const [criticalNeeds, setCriticalNeeds] = useState<NeedItem[]>([]);
   const [orgNeeds, setOrgNeeds] = useState<NeedItem[]>([]);
+  const [orgDonations, setOrgDonations] = useState<Donation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -119,7 +122,7 @@ export default function OrgAdminDashboard() {
           );
 
         const unfulfilledCritical = critical.filter(
-          (n) => n.quantity_received < n.quantity_required,
+          (n) => n.quantity_confirmed < n.quantity_required,
         );
 
         const allDonations = await getDonations();
@@ -243,10 +246,17 @@ export default function OrgAdminDashboard() {
               dDate.getMonth() === m.month && dDate.getFullYear() === m.year
             );
           });
+          const confirmedMonthDonations = monthDonations.filter(
+            (d) => d.status === "CONFIRMED" || d.status === "FULFILLED",
+          );
+          const fulfilledMonthDonations = monthDonations.filter(
+            (d) => d.status === "FULFILLED",
+          );
           return {
             name: m.name,
             donations: monthDonations.length,
-            confirmed: 0,
+            confirmed: confirmedMonthDonations.length,
+            fulfilled: fulfilledMonthDonations.length,
           };
         });
 
@@ -259,10 +269,14 @@ export default function OrgAdminDashboard() {
           const confirmedDonations = yearDonations.filter(
             (d) => d.status === "CONFIRMED" || d.status === "FULFILLED",
           );
+          const fulfilledDonations = yearDonations.filter(
+            (d) => d.status === "FULFILLED",
+          );
           return {
             name: year.toString(),
             donations: yearDonations.length,
             confirmed: confirmedDonations.length,
+            fulfilled: fulfilledDonations.length,
           };
         });
 
@@ -271,6 +285,7 @@ export default function OrgAdminDashboard() {
           totalNeeds: myNeeds.length,
           criticalNeeds: critical.length,
           donations: myDonations.length,
+          successfulDonationsThisMonth: thisMonthDonations.length,
         });
 
         setAnalytics({
@@ -284,6 +299,7 @@ export default function OrgAdminDashboard() {
 
         setCriticalNeeds(unfulfilledCritical.slice(0, 3));
         setOrgNeeds(myNeeds);
+        setOrgDonations(orgDonations);
       } catch (err: unknown) {
         setError(
           err instanceof Error ? err.message : "Failed to fetch dashboard data",
@@ -394,7 +410,7 @@ export default function OrgAdminDashboard() {
         </div>
 
         {/* Lobby Map */}
-        <OrgLobbyMap organization={organization} needs={orgNeeds} />
+        <OrgLobbyMap organization={organization} needs={orgNeeds} donations={orgDonations} />
 
         {/* Analytics & Graphs */}
         <div id="analytics-section" className="mb-12">
@@ -506,11 +522,11 @@ export default function OrgAdminDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-rose-600">
-                        {need.quantity_required - need.quantity_received} left
+                        {need.quantity_required - need.quantity_confirmed} left
                       </p>
                       <progress
                         className="w-24 h-1.5 mt-1 rounded-full overflow-hidden [&::-webkit-progress-bar]:bg-slate-200 [&::-webkit-progress-value]:bg-rose-500 [&::-moz-progress-bar]:bg-rose-500 bg-slate-200 text-rose-500"
-                        value={need.quantity_received}
+                        value={need.quantity_confirmed}
                         max={need.quantity_required}
                       />
                     </div>
@@ -541,10 +557,10 @@ export default function OrgAdminDashboard() {
                 </div>
                 <div>
                   <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-                    New Donors
+                    Successful Donations
                   </p>
                   <p className="text-3xl font-black">
-                    {stats.donations}{" "}
+                    {stats.successfulDonationsThisMonth}{" "}
                     <span className="text-xs text-blue-400 font-bold ml-2">
                       Active
                     </span>

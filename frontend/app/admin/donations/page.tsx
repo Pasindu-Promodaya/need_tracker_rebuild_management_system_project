@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import {
   Donation,
@@ -14,7 +14,7 @@ import {
 } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CheckCircle2, XCircle, Clock, Gift } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface DonationDialogState {
   isOpen: boolean;
@@ -23,8 +23,10 @@ interface DonationDialogState {
   donationDetails: Donation | null;
 }
 
-export default function DonationsPage() {
+function DonationsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams.get("section");
   const { user, loading: authLoading } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +48,19 @@ export default function DonationsPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [isReasonStep, setIsReasonStep] = useState(false);
   const [confirmOption, setConfirmOption] = useState<"remaining" | "full">("remaining");
+
+  useEffect(() => {
+    if (sectionParam) {
+      const secId = Number(sectionParam);
+      if (!isNaN(secId)) {
+        setSectionFilter(secId);
+      } else {
+        setSectionFilter("ALL");
+      }
+    } else {
+      setSectionFilter("ALL");
+    }
+  }, [sectionParam]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -131,7 +146,7 @@ export default function DonationsPage() {
 
     const donation = confirmDialog.donationDetails;
     const need = needsMap.get(donation.need_item);
-    const remainingNeeded = need ? Math.max(0, need.quantity_required - need.quantity_received) : 0;
+    const remainingNeeded = need ? Math.max(0, need.quantity_required - need.quantity_confirmed) : 0;
 
     let confirmedQty = donation.quantity;
     if (donation.quantity > remainingNeeded && confirmOption === "remaining") {
@@ -274,19 +289,20 @@ export default function DonationsPage() {
       .reduce((sum, d) => sum + d.quantity, 0);
   };
 
+  const sectionFilteredDonations = (() => {
+    if (sectionFilter === "ALL") return donations;
+    return donations.filter((d) => {
+      const need = needsMap.get(d.need_item);
+      return need?.section === sectionFilter;
+    });
+  })();
+
   const filteredDonations = (() => {
     let result: Donation[] = [];
-    if (filter === "ALL") result = donations;
+    if (filter === "ALL") result = sectionFilteredDonations;
     else if (filter === "CONFIRMED")
-      result = donations.filter((d) => d.status === "CONFIRMED");
-    else result = donations.filter((d) => d.status === filter);
-
-    if (sectionFilter !== "ALL") {
-      result = result.filter((d) => {
-        const need = needsMap.get(d.need_item);
-        return need?.section === sectionFilter;
-      });
-    }
+      result = sectionFilteredDonations.filter((d) => d.status === "CONFIRMED");
+    else result = sectionFilteredDonations.filter((d) => d.status === filter);
 
     if (filter === "CANCELLED") {
       return result.sort((a, b) => {
@@ -568,7 +584,7 @@ export default function DonationsPage() {
     const donation = confirmDialog.donationDetails;
     const isConfirm = confirmDialog.type === "confirm";
     const need = needsMap.get(donation.need_item);
-    const remainingNeeded = need ? Math.max(0, need.quantity_required - need.quantity_received) : 0;
+    const remainingNeeded = need ? Math.max(0, need.quantity_required - need.quantity_confirmed) : 0;
     const hasOverAllocation = isConfirm && donation.quantity > remainingNeeded;
 
     if (isReasonStep && !isConfirm) {
@@ -805,22 +821,18 @@ export default function DonationsPage() {
               (status) => {
                 let count = 0;
                 if (status === "ALL") {
-                  count = donations.length;
+                  count = sectionFilteredDonations.length;
                 } else if (status === "CONFIRMED") {
-                  count = donations.filter(
+                  count = sectionFilteredDonations.filter(
                     (d) => d.status === "CONFIRMED",
                   ).length;
                 } else if (status === "FULFILLED") {
-                  // Count unique need items for FULFILLED tab
-                  const fulfilledDonations = donations.filter(
+                  // Count actual fulfilled requests (donations)
+                  count = sectionFilteredDonations.filter(
                     (d) => d.status === "FULFILLED",
-                  );
-                  const uniqueNeeds = new Set(
-                    fulfilledDonations.map((d) => d.need_item),
-                  );
-                  count = uniqueNeeds.size;
+                  ).length;
                 } else {
-                  count = donations.filter((d) => d.status === status).length;
+                  count = sectionFilteredDonations.filter((d) => d.status === status).length;
                 }
 
                 return (
@@ -834,9 +846,7 @@ export default function DonationsPage() {
                     }`}
                   >
                     {status}
-                    {status !== "ALL" && (
-                      <span className="ml-2 text-sm">({count})</span>
-                    )}
+                    <span className="ml-2 text-sm">({count})</span>
                   </button>
                 );
               },
@@ -850,7 +860,17 @@ export default function DonationsPage() {
             <select
               id="section-filter"
               value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))}
+              onChange={(e) => {
+                const val = e.target.value;
+                const params = new URLSearchParams(searchParams.toString());
+                if (val === "ALL") {
+                  params.delete("section");
+                } else {
+                  params.set("section", val);
+                }
+                const newSearch = params.toString();
+                router.push(`/admin/donations${newSearch ? `?${newSearch}` : ""}`);
+              }}
               className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 font-medium transition"
             >
               <option value="ALL">All Sections</option>
@@ -962,17 +982,17 @@ export default function DonationsPage() {
                               </td>
                               <td className="px-6 py-4 text-sm text-green-700 font-medium">
                                 {needsMap.get(firstDonation.need_item)
-                                  ?.quantity_received !== undefined
-                                  ? `${needsMap.get(firstDonation.need_item)?.quantity_received} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
+                                  ?.quantity_confirmed !== undefined
+                                  ? `${needsMap.get(firstDonation.need_item)?.quantity_confirmed} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
                                   : "-"}
                               </td>
                               <td className={`px-6 py-4 text-sm font-medium ${
-                                Math.max(0, (needsMap.get(firstDonation.need_item)?.quantity_required || 0) - (needsMap.get(firstDonation.need_item)?.quantity_received || 0)) > 0
+                                Math.max(0, (needsMap.get(firstDonation.need_item)?.quantity_required || 0) - (needsMap.get(firstDonation.need_item)?.quantity_confirmed || 0)) > 0
                                   ? "text-red-600"
                                   : "text-green-600"
                               }`}>
                                 {needsMap.get(firstDonation.need_item)
-                                  ? `${Math.max(0, (needsMap.get(firstDonation.need_item)?.quantity_required || 0) - (needsMap.get(firstDonation.need_item)?.quantity_received || 0))} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
+                                  ? `${Math.max(0, (needsMap.get(firstDonation.need_item)?.quantity_required || 0) - (needsMap.get(firstDonation.need_item)?.quantity_confirmed || 0))} ${needsMap.get(firstDonation.need_item)?.unit || "UNIT"}`
                                   : "-"}
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-600">
@@ -1102,22 +1122,23 @@ export default function DonationsPage() {
                             </td>
                             <td className="px-6 py-4 text-sm text-purple-700 font-medium">
                               {needsMap.get(donation.need_item)
-                                ? `${getReceivedQuantity(donation.need_item)} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
-                                : "-"}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-green-700 font-medium">
-                              {needsMap.get(donation.need_item)
                                 ?.quantity_received !== undefined
                                 ? `${needsMap.get(donation.need_item)?.quantity_received} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
                                 : "-"}
                             </td>
+                            <td className="px-6 py-4 text-sm text-green-700 font-medium">
+                              {needsMap.get(donation.need_item)
+                                ?.quantity_confirmed !== undefined
+                                ? `${needsMap.get(donation.need_item)?.quantity_confirmed} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
+                                : "-"}
+                            </td>
                             <td className={`px-6 py-4 text-sm font-medium ${
-                              Math.max(0, (needsMap.get(donation.need_item)?.quantity_required || 0) - (needsMap.get(donation.need_item)?.quantity_received || 0)) > 0
+                              Math.max(0, (needsMap.get(donation.need_item)?.quantity_required || 0) - (needsMap.get(donation.need_item)?.quantity_confirmed || 0)) > 0
                                 ? "text-red-600"
                                 : "text-green-600"
                             }`}>
                               {needsMap.get(donation.need_item)
-                                ? `${Math.max(0, (needsMap.get(donation.need_item)?.quantity_required || 0) - (needsMap.get(donation.need_item)?.quantity_received || 0))} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
+                                ? `${Math.max(0, (needsMap.get(donation.need_item)?.quantity_required || 0) - (needsMap.get(donation.need_item)?.quantity_confirmed || 0))} ${needsMap.get(donation.need_item)?.unit || "UNIT"}`
                                 : "-"}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
@@ -1211,7 +1232,7 @@ export default function DonationsPage() {
             let totalQuantity = 0;
 
             if (status === "CONFIRMED") {
-              const confirmedDonations = donations.filter(
+              const confirmedDonations = sectionFilteredDonations.filter(
                 (d) => d.status === "CONFIRMED",
               );
               count = confirmedDonations.length;
@@ -1220,7 +1241,7 @@ export default function DonationsPage() {
                 0,
               );
             } else if (status === "FULFILLED") {
-              const fulfilledDonations = donations.filter(
+              const fulfilledDonations = sectionFilteredDonations.filter(
                 (d) => d.status === "FULFILLED",
               );
               const uniqueNeeds = new Set(
@@ -1232,7 +1253,7 @@ export default function DonationsPage() {
                 0,
               );
             } else {
-              const standardDonations = donations.filter(
+              const standardDonations = sectionFilteredDonations.filter(
                 (d) => d.status === status,
               );
               count = standardDonations.length;
@@ -1297,5 +1318,17 @@ export default function DonationsPage() {
       {confirmationDialogContent}
       {viewDialogContent}
     </div>
+  );
+}
+
+export default function DonationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    }>
+      <DonationsContent />
+    </Suspense>
   );
 }
