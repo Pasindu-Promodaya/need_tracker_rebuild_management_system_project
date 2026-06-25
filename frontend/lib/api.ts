@@ -52,6 +52,7 @@ export interface OrgAdminInviteData {
   password: string;
   first_name: string;
   last_name: string;
+  phone_number?: string;
 }
 
 export interface AdminApprovalRequest {
@@ -90,6 +91,7 @@ export interface NeedItem {
   priority: "CRITICAL" | "ESSENTIAL" | "NICE";
   quantity_required: number;
   quantity_received: number;
+  quantity_confirmed: number;
   unit: "UNIT" | "BOX" | "KG" | "LITER";
   description: string;
   created_at: string;

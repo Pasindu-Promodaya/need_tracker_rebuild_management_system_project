@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Organization, getOrganizations, NeedItem, getNeeds, SystemStats, getSystemStats, getPublicRecentDonations, PublicDonation } from "@/lib/api";
 import { PageLoading } from "@/components/LoadingSpinner";
-import Image from "next/image";
 import AdvancedSriLankaMap from "@/components/AdvancedSriLankaMap";
 
 
@@ -35,8 +34,8 @@ export default function Home() {
         const sortedNeeds = needs.sort(
           (a, b) =>
             b.quantity_required -
-            b.quantity_received -
-            (a.quantity_required - a.quantity_received),
+            b.quantity_confirmed -
+            (a.quantity_required - a.quantity_confirmed),
         );
         setUrgentNeed(sortedNeeds[0]);
       }
@@ -77,6 +76,7 @@ export default function Home() {
       <section className="relative bg-blue-900 overflow-hidden pt-16 lg:pt-24 pb-0 flex flex-col justify-between min-h-[650px]">
         {/* Full-bleed Background Image covering the entire blue section */}
         <div className="absolute inset-0 z-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1920&q=80"
             alt="Hospital Donation Background"
@@ -208,14 +208,14 @@ export default function Home() {
                       <div
                         className="h-full bg-green-500 rounded-full transition-all duration-1000"
                         style={{
-                          width: `${Math.min(100, Math.round((urgentNeed.quantity_received / urgentNeed.quantity_required) * 100))}%`,
+                          width: `${Math.min(100, Math.round((urgentNeed.quantity_confirmed / urgentNeed.quantity_required) * 100))}%`,
                         }}
                       ></div>
                     </div>
                     <div className="flex justify-between text-xs text-slate-400 font-medium">
-                      <span>{urgentNeed.quantity_received} of {urgentNeed.quantity_required} units delivered</span>
+                      <span>{urgentNeed.quantity_confirmed} of {urgentNeed.quantity_required} units pledged</span>
                       <span className="text-green-400 font-bold">
-                        {Math.min(100, Math.round((urgentNeed.quantity_received / urgentNeed.quantity_required) * 100))}%
+                        {Math.min(100, Math.round((urgentNeed.quantity_confirmed / urgentNeed.quantity_required) * 100))}%
                       </span>
                     </div>
                   </div>

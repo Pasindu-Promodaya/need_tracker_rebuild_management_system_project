@@ -58,9 +58,9 @@ export default function NeedsContent() {
     }
     if (sortBy === "progress") {
       const progressA =
-        a.quantity_required > 0 ? a.quantity_received / a.quantity_required : 0;
+        a.quantity_required > 0 ? a.quantity_confirmed / a.quantity_required : 0;
       const progressB =
-        b.quantity_required > 0 ? b.quantity_received / b.quantity_required : 0;
+        b.quantity_required > 0 ? b.quantity_confirmed / b.quantity_required : 0;
       return progressA - progressB; // Show least fulfilled first
     }
     return 0;
@@ -72,7 +72,7 @@ export default function NeedsContent() {
     critical: needs.filter((n) => n.priority === "CRITICAL").length,
     essential: needs.filter((n) => n.priority === "ESSENTIAL").length,
     nice: needs.filter((n) => n.priority === "NICE").length,
-    fulfilled: needs.filter((n) => n.quantity_received >= n.quantity_required)
+    fulfilled: needs.filter((n) => n.quantity_confirmed >= n.quantity_required)
       .length,
   };
 

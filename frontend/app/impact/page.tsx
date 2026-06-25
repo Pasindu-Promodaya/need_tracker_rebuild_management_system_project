@@ -127,7 +127,7 @@ export default function ImpactPage() {
     );
     const fulfilledNeedsCount = needs.filter(
       (n) =>
-        n.quantity_required > 0 && n.quantity_received >= n.quantity_required,
+        n.quantity_required > 0 && n.quantity_confirmed >= n.quantity_required,
     ).length;
 
     const needMap = new Map<number, NeedItem>();
@@ -193,7 +193,7 @@ export default function ImpactPage() {
         name: n.name,
         progress: Math.min(
           100,
-          Math.round((n.quantity_received / n.quantity_required) * 100),
+          Math.round((n.quantity_confirmed / n.quantity_required) * 100),
         ),
       }))
       .sort((a, b) => b.progress - a.progress)
