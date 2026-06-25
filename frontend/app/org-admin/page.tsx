@@ -84,7 +84,7 @@ export default function OrgAdminDashboard() {
   const [orgNeeds, setOrgNeeds] = useState<NeedItem[]>([]);
   const [orgDonations, setOrgDonations] = useState<Donation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [, setError] = useState("");
 
   useEffect(() => {
     if (!authLoading && user?.role !== "ORG_ADMIN") {

@@ -37,7 +37,13 @@ function DonationsContent() {
   const [receiving, setReceiving] = useState<number | null>(null);
   const [needsMap, setNeedsMap] = useState<Map<number, NeedItem>>(new Map());
   const [sections, setSections] = useState<Section[]>([]);
-  const [sectionFilter, setSectionFilter] = useState<number | "ALL">("ALL");
+  const sectionFilter = (() => {
+    if (sectionParam) {
+      const secId = Number(sectionParam);
+      return !isNaN(secId) ? secId : "ALL";
+    }
+    return "ALL";
+  })();
   const [confirmDialog, setConfirmDialog] = useState<DonationDialogState>({
     isOpen: false,
     type: null,
@@ -48,19 +54,6 @@ function DonationsContent() {
   const [cancelReason, setCancelReason] = useState("");
   const [isReasonStep, setIsReasonStep] = useState(false);
   const [confirmOption, setConfirmOption] = useState<"remaining" | "full">("remaining");
-
-  useEffect(() => {
-    if (sectionParam) {
-      const secId = Number(sectionParam);
-      if (!isNaN(secId)) {
-        setSectionFilter(secId);
-      } else {
-        setSectionFilter("ALL");
-      }
-    } else {
-      setSectionFilter("ALL");
-    }
-  }, [sectionParam]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -283,11 +276,6 @@ function DonationsContent() {
     );
   };
 
-  const getReceivedQuantity = (needId: number): number => {
-    return donations
-      .filter((d) => d.need_item === needId && d.status === "FULFILLED")
-      .reduce((sum, d) => sum + d.quantity, 0);
-  };
 
   const sectionFilteredDonations = (() => {
     if (sectionFilter === "ALL") return donations;

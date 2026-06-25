@@ -194,7 +194,7 @@ class DonationSplitTests(APITestCase):
         self.assertIn("Donation Cancelled", email.subject)
         
         # Check that the email body contains critical needs from the organization
-        self.assertIn("Here are some of the most critical needs at Test General Hospital that still require support:", email.body)
+        self.assertIn("Here are some of the most important needs at Test General Hospital that still require support:", email.body)
         self.assertIn(self.need_item.name, email.body)
 
     def test_receive_donation_sends_thank_you_email(self):

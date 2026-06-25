@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Section } from "@/lib/api";
 import NeedCard from "./NeedCard";
 
@@ -25,11 +25,13 @@ export default function SectionAccordion({
   onEditSection,
   onDeleteSection,
 }: SectionAccordionProps) {
+  const [prevDefaultOpen, setPrevDefaultOpen] = useState(defaultOpen);
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  useEffect(() => {
+  if (defaultOpen !== prevDefaultOpen) {
+    setPrevDefaultOpen(defaultOpen);
     setIsOpen(defaultOpen);
-  }, [defaultOpen]);
+  }
 
   const criticalCount =
     section.needs?.filter((n) => n.priority === "CRITICAL").length || 0;

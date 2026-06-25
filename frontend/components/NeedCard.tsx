@@ -25,7 +25,6 @@ interface NeedCardProps {
 
 export default function NeedCard({
   need,
-  showSection,
   sectionName,
   organizationName,
   onDonationSuccess,

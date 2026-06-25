@@ -25,7 +25,11 @@ interface DonationAnalytics {
   fulfilled: number;
 }
 
-const renderCustomLegend = (props: any) => {
+interface CustomLegendProps {
+  payload?: readonly LegendItem[];
+}
+
+const renderCustomLegend = (props: CustomLegendProps) => {
   const payload = props.payload as readonly LegendItem[] | undefined;
   const sortedPayload = payload
     ? [...payload].sort((a, b) => {
@@ -158,9 +162,9 @@ export default function GraphsView({
                     border: "1px solid #e2e8f0",
                     boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                   }}
-                  itemSorter={(item: any) => {
+                  itemSorter={(item: { name?: string | number }) => {
                     const order = ["Donations", "Confirmed", "Fulfilled"];
-                    return order.indexOf(item.name ?? "");
+                    return order.indexOf(String(item.name ?? ""));
                   }}
                 />
                 <Legend
@@ -247,9 +251,9 @@ export default function GraphsView({
                     border: "1px solid #e2e8f0",
                     boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                   }}
-                  itemSorter={(item: any) => {
+                  itemSorter={(item: { name?: string | number }) => {
                     const order = ["Donations", "Confirmed", "Fulfilled"];
-                    return order.indexOf(item.name ?? "");
+                    return order.indexOf(String(item.name ?? ""));
                   }}
                 />
                 <Legend
